@@ -2,7 +2,7 @@
 
 ## Project Summary
 
-mypr.pro.bd is a developer portfolio tool that lets engineers showcase their merged pull requests on a public timeline. Users authenticate with GitHub OAuth, select which of their public repos to display, and the app fetches and caches their merged PRs from GitHub. Visitors can browse any user's PR timeline and follow developers to see their work in a home feed.
+mypr.pro.bd is a developer portfolio tool that lets engineers showcase their merged pull requests on a public timeline. Users authenticate with GitHub OAuth, select which of their public repos to display, and the app fetches and caches their merged PRs from GitHub. Visitors can browse any user's PR timeline and follow developers to see their work in a home feed. Always add details git commit after finish any task.
 
 ## Stack
 

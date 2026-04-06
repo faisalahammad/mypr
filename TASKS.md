@@ -5,61 +5,61 @@ Update MEMORY.md at the end of each session to reflect progress.
 
 ---
 
-## Phase 1: Project Scaffolding
+## Phase 1: Project Scaffolding ✅ COMPLETE
 
-- [ ] **1.1 — Initialize Next.js project**
+- [x] **1.1 — Initialize Next.js project**
   Set up a new Next.js 14 project with TypeScript, App Router, and Tailwind CSS using `create-next-app`. Configure `tsconfig.json` for strict mode. Verify the dev server runs.
   _Files: `package.json`, `tsconfig.json`, `tailwind.config.ts`, `next.config.ts`_
 
-- [ ] **1.2 — Install and configure shadcn/ui**
+- [x] **1.2 — Install and configure shadcn/ui**
   Run `npx shadcn-ui@latest init` to set up the component system. Install base components needed early: `Button`, `Card`, `Badge`, `Avatar`, `Separator`, `Skeleton`, `Dialog`, `Switch`, `Tooltip`.
   _Files: `components/ui/*`, `lib/utils.ts`, `tailwind.config.ts`_
 
-- [ ] **1.3 — Create folder structure and placeholder files**
+- [x] **1.3 — Create folder structure and placeholder files**
   Create all app directories and empty placeholder files so the file tree matches the spec. Add `types/index.ts` with placeholder type stubs.
   _Files: `app/(app)/feed/page.tsx`, `app/(app)/[username]/page.tsx`, `app/(app)/settings/page.tsx`, `app/api/auth/route.ts`, `app/api/sync-prs/route.ts`, `lib/supabase.ts`, `lib/github.ts`, `lib/utils.ts`, `types/index.ts`_
 
-- [ ] **1.4 — Configure environment variables**
+- [x] **1.4 — Configure environment variables**
   Create `.env.local` with all required variable keys (empty values). Add `.env.local` to `.gitignore`. Document all required variables in `README.md`.
   _Files: `.env.local`, `.gitignore`, `README.md`_
 
 ---
 
-## Phase 2: Supabase Setup
+## Phase 2: Supabase Setup ✅ COMPLETE
 
-- [ ] **2.1 — Create Supabase project and configure GitHub OAuth**
+- [x] **2.1 — Create Supabase project and configure GitHub OAuth**
   Create a new Supabase project. In the Supabase dashboard, enable GitHub as an OAuth provider. Set the callback URL to `https://mypr.pro.bd/api/auth/callback`. Record the client ID and secret.
   _External: Supabase dashboard, GitHub OAuth app settings_
 
-- [ ] **2.2 — Create database tables**
+- [x] **2.2 — Create database tables**
   Write and run the SQL migrations for all four tables: `profiles`, `follows`, `repositories`, `pull_requests`. Include all columns and types exactly as in CLAUDE.md.
   _Files: `supabase/migrations/001_create_tables.sql`_
 
-- [ ] **2.3 — Configure Row Level Security (RLS)**
+- [x] **2.3 — Configure Row Level Security (RLS)**
   Enable RLS on all four tables. Write policies: profiles are readable by anyone, writable only by owner. follows readable by anyone, insert/delete by owner. repositories readable by anyone, insert/update/delete by owner. pull_requests readable by anyone, insert/update/delete by owner. `github_access_token` must never be readable by the anon key.
   _Files: `supabase/migrations/002_rls_policies.sql`_
 
-- [ ] **2.4 — Set up typed Supabase client**
+- [x] **2.4 — Set up typed Supabase client**
   Generate types from the Supabase schema using the Supabase CLI (`supabase gen types`). Set up server and client Supabase helpers in `lib/supabase.ts` using `@supabase/ssr`.
   _Files: `lib/supabase.ts`, `types/supabase.ts`_
 
 ---
 
-## Phase 3: Auth Flow
+## Phase 3: Auth Flow ✅ COMPLETE
 
-- [ ] **3.1 — Implement GitHub OAuth login**
+- [x] **3.1 — Implement GitHub OAuth login**
   Create the sign-in page with a "Login with GitHub" button. Wire it to Supabase's OAuth flow. Handle the redirect back from GitHub.
   _Files: `app/(auth)/login/page.tsx`, `app/api/auth/callback/route.ts`_
 
-- [ ] **3.2 — Handle post-login profile upsert**
+- [x] **3.2 — Handle post-login profile upsert**
   On successful login callback, upsert the user's profile into the `profiles` table using data from the GitHub OAuth token (username, avatar, access token). Redirect to `/settings` after first login.
   _Files: `app/api/auth/callback/route.ts`, `lib/supabase.ts`_
 
-- [ ] **3.3 — Implement protected routes middleware**
+- [x] **3.3 — Implement protected routes middleware**
   Add Next.js middleware to redirect unauthenticated users away from `/feed` and `/settings`. Public routes (`/[username]`, `/login`) remain accessible without a session.
   _Files: `middleware.ts`_
 
-- [ ] **3.4 — Session access in server components**
+- [x] **3.4 — Session access in server components**
   Create a helper to read the current session in server components and API routes. Use this consistently in all protected pages.
   _Files: `lib/supabase.ts`, `app/(app)/feed/page.tsx`, `app/(app)/settings/page.tsx`_
 
