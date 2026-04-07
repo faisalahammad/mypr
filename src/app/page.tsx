@@ -81,7 +81,7 @@ const MOCK_BROWSER_PRS = [
 
 function BrowserMockup() {
   return (
-    <div className="fade-up-element mt-12 mx-auto max-w-2xl rounded-2xl gradient-border bg-card shadow-xl overflow-hidden">
+    <div className="mt-12 mx-auto max-w-2xl rounded-2xl gradient-border bg-card shadow-xl overflow-hidden">
       {/* Chrome bar */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-3 bg-secondary/60">
         <span className="h-3 w-3 rounded-full bg-[hsl(0,84%,60%,0.6)]" />
@@ -478,7 +478,9 @@ export default async function HomePage() {
                 LinkedIn, Twitter, or anywhere.
               </p>
             </FadeUp>
-            <BrowserMockup />
+            <FadeUp delay={0.2}>
+              <BrowserMockup />
+            </FadeUp>
           </div>
         </section>
 
