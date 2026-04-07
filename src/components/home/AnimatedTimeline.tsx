@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { GitPullRequest } from "lucide-react";
+import { GitPullRequestArrow } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,13 +12,13 @@ interface PRCard {
   additions: number;
   deletions: number;
   commits: number;
-  summary: string;
   username: string;
   initials: string;
-  avatarColor: string;
+  avatarBg: string;
+  topBorder: string;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Mock data (matches screenshot) ──────────────────────────────────────────
 
 const MOCK_PRS: PRCard[] = [
   {
@@ -27,86 +27,77 @@ const MOCK_PRS: PRCard[] = [
     additions: 84,
     deletions: 12,
     commits: 4,
-    summary:
-      "Prevents fatal when post meta query is applied without a base taxonomy query. Adds regression test for the edge case.",
-    username: "faisal_a",
+    username: "faisalahammad",
     initials: "FA",
-    avatarColor: "bg-primary",
+    avatarBg: "bg-[hsl(213,94%,58%)]",
+    topBorder: "border-t-[hsl(213,94%,58%)]",
   },
   {
     repo: "vercel/next.js",
-    title: "Add support for custom headers in middleware response",
-    additions: 142,
-    deletions: 31,
+    title: "Improve error boundary fallback for async server components",
+    additions: 210,
+    deletions: 45,
     commits: 6,
-    summary:
-      "Extends the middleware response API to allow setting arbitrary response headers before forwarding to the origin.",
-    username: "tanvir_d",
-    initials: "TD",
-    avatarColor: "bg-sky-500",
-  },
-  {
-    repo: "roots/sage",
-    title: "Refactor asset pipeline to use Vite 5.x manifest format",
-    additions: 203,
-    deletions: 87,
-    commits: 9,
-    summary:
-      "Migrates the manifest reader from the legacy array format to the flat object format introduced in Vite 5.",
-    username: "linh_n",
-    initials: "LN",
-    avatarColor: "bg-emerald-500",
-  },
-  {
-    repo: "nicehash/NiceHashQuickMiner",
-    title: "Resolve GPU detection fallback on multi-GPU rigs",
-    additions: 57,
-    deletions: 23,
-    commits: 3,
-    summary:
-      "Adds fallback detection path for systems where the primary CUDA enumeration fails on specific driver versions.",
-    username: "marcos_r",
-    initials: "MR",
-    avatarColor: "bg-orange-500",
+    username: "tanzid",
+    initials: "TA",
+    avatarBg: "bg-primary",
+    topBorder: "border-t-primary",
   },
   {
     repo: "pods-framework/pods",
-    title: "Correct relationship field traversal in REST API output",
-    additions: 118,
-    deletions: 44,
+    title: "Add support for repeatable field groups in REST API",
+    additions: 133,
+    deletions: 22,
+    commits: 3,
+    username: "mdrakib",
+    initials: "MD",
+    avatarBg: "bg-[hsl(152,69%,45%)]",
+    topBorder: "border-t-[hsl(152,69%,45%)]",
+  },
+  {
+    repo: "nicehash/NiceHashQuickMiner",
+    title: "Handle null response from pool stats endpoint",
+    additions: 56,
+    deletions: 8,
+    commits: 2,
+    username: "sabbir",
+    initials: "SA",
+    avatarBg: "bg-[hsl(25,95%,60%)]",
+    topBorder: "border-t-[hsl(25,95%,60%)]",
+  },
+  {
+    repo: "roots/sage",
+    title: "Update Blade directive registration for Laravel 11 compatibility",
+    additions: 44,
+    deletions: 17,
     commits: 5,
-    summary:
-      "Fixes nested relationship fields returning raw IDs instead of resolved objects when depth > 1 in REST context.",
-    username: "priya_s",
-    initials: "PS",
-    avatarColor: "bg-pink-500",
+    username: "nahid",
+    initials: "NA",
+    avatarBg: "bg-[hsl(330,80%,60%)]",
+    topBorder: "border-t-[hsl(330,80%,60%)]",
   },
 ];
 
 // ─── Animation timing (ms) ────────────────────────────────────────────────────
 
 const CARD_DURATION = 800;
-const STAGGER = 200;
+const STAGGER = 180;
 const HOLD = 4000;
 const EXIT = 800;
 const ALL_IN = (MOCK_PRS.length - 1) * STAGGER + CARD_DURATION;
 
-// ─── Container variants (stagger children) ────────────────────────────────────
+// ─── Framer Motion variants ───────────────────────────────────────────────────
 
 const containerVariants: Variants = {
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: STAGGER / 1000,
-    },
+    transition: { staggerChildren: STAGGER / 1000 },
   },
-  hidden: {
-    opacity: 0,
-  },
+  hidden: { opacity: 0 },
 };
 
 const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 28 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
@@ -114,49 +105,48 @@ const cardVariants: Variants = {
   },
 };
 
-// ─── PR Card (light theme) ────────────────────────────────────────────────────
+// ─── PR Card ─────────────────────────────────────────────────────────────────
 
 function Card({ pr }: { pr: PRCard }) {
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3.5 shadow-sm shadow-black/5">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-mono text-xs font-medium text-muted-foreground">
-          <GitPullRequest className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{pr.repo}</span>
-        </div>
-        <div className="flex items-center gap-1 rounded-full bg-[hsl(152,69%,45%)]/10 px-2 py-0.5 text-xs font-medium text-[hsl(152,69%,45%)]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152,69%,45%)]" />
-          Merged
-        </div>
-      </div>
+    <div
+      className={`rounded-xl border border-border border-t-2 bg-card px-4 py-3.5 shadow-sm ${pr.topBorder}`}
+    >
+      {/* Repo */}
+      <p className="mb-1.5 font-mono text-xs text-muted-foreground">
+        {pr.repo}
+      </p>
 
-      <p className="mb-1.5 text-sm font-semibold leading-snug text-foreground">
+      {/* Title */}
+      <p className="mb-2 text-sm font-semibold leading-snug text-foreground">
         {pr.title}
       </p>
 
-      <p className="mb-2.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-        {pr.summary}
+      {/* Stats */}
+      <p className="mb-3 font-mono text-xs text-muted-foreground">
+        <span className="font-semibold text-[hsl(152,69%,45%)]">
+          +{pr.additions}
+        </span>{" "}
+        <span className="font-semibold text-destructive">-{pr.deletions}</span>
+        {"  ·  "}
+        {pr.commits} commits
       </p>
 
+      {/* Footer: merged badge + user */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
-          <span className="font-semibold text-[hsl(152,69%,45%)]">
-            +{pr.additions}
-          </span>
-          <span className="text-border">−</span>
-          <span className="font-semibold text-destructive">{pr.deletions}</span>
-          <span className="mx-0.5 text-border">·</span>
-          <span>{pr.commits} commits</span>
+        <div className="flex items-center gap-1.5 rounded-full bg-[hsl(152,69%,45%)] px-2.5 py-1 text-xs font-medium text-white">
+          <GitPullRequestArrow className="h-3 w-3" />
+          Merged
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-muted-foreground">
+            {pr.username}
+          </span>
           <div
-            className={`flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9px] font-bold text-white ${pr.avatarColor}`}
+            className={`flex h-6 w-6 items-center justify-center rounded-full font-mono text-[9px] font-bold text-white ${pr.avatarBg}`}
           >
             {pr.initials}
           </div>
-          <span className="font-mono text-xs text-muted-foreground">
-            @{pr.username}
-          </span>
         </div>
       </div>
     </div>
@@ -207,7 +197,9 @@ export default function AnimatedTimeline() {
       initial="hidden"
       animate={phase === "out" ? "hidden" : "visible"}
       transition={
-        phase === "out" ? { duration: EXIT / 1000, ease: "easeIn" } : undefined
+        phase === "out"
+          ? { duration: EXIT / 1000, ease: "easeIn" }
+          : undefined
       }
       className="flex flex-col gap-3"
     >

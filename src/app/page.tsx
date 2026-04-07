@@ -8,8 +8,9 @@ import {
   Code2,
   Download,
   Filter,
-  GitPullRequest,
+  GitPullRequestArrow,
   Lock,
+  Sparkles,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -201,56 +202,65 @@ export default async function HomePage() {
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative flex min-h-screen items-center">
-          {/* Background decorations */}
+          {/* Subtle background glow */}
           <div
             className="pointer-events-none absolute inset-0 overflow-hidden"
             aria-hidden="true"
           >
             <div
-              className="absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]"
-              style={{ animation: "glow-pulse 6s ease-in-out infinite" }}
+              className="absolute -left-32 top-1/3 h-[500px] w-[500px] rounded-full bg-primary/8 blur-[140px]"
+              style={{ animation: "glow-pulse 7s ease-in-out infinite" }}
             />
             <div
-              className="absolute -bottom-20 -right-20 h-[400px] w-[400px] rounded-full bg-[hsl(172,66%,50%)]/10 blur-[100px]"
-              style={{ animation: "glow-pulse 8s ease-in-out infinite 2s" }}
-            />
-            <div
-              className="absolute inset-0 opacity-[0.025]"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle, hsl(262,83%,58%) 1px, transparent 1px)",
-                backgroundSize: "32px 32px",
-              }}
+              className="absolute -right-32 top-1/4 h-[400px] w-[400px] rounded-full bg-[hsl(330,80%,60%)]/6 blur-[120px]"
+              style={{ animation: "glow-pulse 9s ease-in-out infinite 1.5s" }}
             />
           </div>
 
-          <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-6 py-24 lg:grid-cols-2 lg:gap-20">
+          <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-16 px-6 py-24 lg:grid-cols-2 lg:gap-24">
 
             {/* Left: copy + CTA */}
-            <div className="flex flex-col gap-8">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152,69%,45%)]" />
-                <span className="font-mono text-xs font-medium text-primary">
-                  Open source · Free to use
+            <div className="flex flex-col gap-7">
+
+              {/* Badge */}
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 shadow-sm">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span className="font-mono text-xs font-medium text-foreground">
+                  Built for developers who ship
                 </span>
               </div>
 
-              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight lg:text-[3.5rem] lg:leading-[1.12]">
-                Every merged PR
-                <br />
-                you&apos;ve ever shipped.
+              {/* Headline — 3 lines, exact colours from screenshot */}
+              <h1 className="text-5xl font-bold leading-[1.08] tracking-tight lg:text-[3.5rem] lg:leading-[1.1]">
+                Login with GitHub,
                 <br />
                 <span className="bg-gradient-to-r from-[hsl(262,83%,58%)] to-[hsl(330,80%,60%)] bg-clip-text text-transparent">
-                  One&nbsp;beautiful timeline.
+                  start building your
                 </span>
+                <br />
+                <span className="text-[hsl(25,95%,60%)]">timeline.</span>
               </h1>
 
-              <p className="max-w-md text-lg leading-relaxed text-muted-foreground">
-                Connect GitHub, choose your repos, and get a public timeline of
-                every contribution you&apos;ve made to open source — shareable in
-                seconds.
+              {/* Subtitle */}
+              <p className="max-w-[480px] text-base leading-relaxed text-muted-foreground">
+                Every merged PR you have ever shipped, in one place. Documented,
+                shareable, and connected to the open source community.
               </p>
 
+              {/* Terminal code block */}
+              <div className="max-w-[420px] rounded-xl border border-border bg-secondary/60 px-4 py-3">
+                <p className="mb-1.5 font-mono text-[11px] text-muted-foreground">
+                  &gt;_ terminal
+                </p>
+                <p className="font-mono text-sm">
+                  <span className="text-[hsl(152,69%,45%)]">$ </span>
+                  <span className="text-foreground">mypr timeline </span>
+                  <span className="text-[hsl(213,94%,58%)]">--user </span>
+                  <span className="text-foreground">faisalahammad</span>
+                </p>
+              </div>
+
+              {/* CTA */}
               <div className="flex flex-wrap items-center gap-4">
                 <a
                   href="/login"
@@ -259,38 +269,35 @@ export default async function HomePage() {
                     "gap-2.5 rounded-xl bg-primary px-7 text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90"
                   )}
                 >
-                  <GitHubIcon className="h-5 w-5" />
-                  Login with GitHub
+                  <GitPullRequestArrow className="h-5 w-5" />
+                  Get Started Free
+                  <span aria-hidden="true">→</span>
                 </a>
                 <span className="font-mono text-sm text-muted-foreground">
-                  Free · No credit card
+                  No setup required
                 </span>
               </div>
 
-              {/* Social proof */}
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {[
-                    "bg-primary",
-                    "bg-sky-500",
-                    "bg-[hsl(152,69%,45%)]",
-                    "bg-[hsl(25,95%,60%)]",
-                  ].map((color, i) => (
-                    <div
-                      key={i}
-                      className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-background font-mono text-[9px] font-bold text-white ${color}`}
-                    >
-                      {["FA", "TD", "LN", "MR"][i]}
-                    </div>
-                  ))}
-                </div>
-                <p className="font-mono text-xs text-muted-foreground">
-                  Joined by contributors from Vercel, WordPress &amp; more
-                </p>
+              {/* Stats */}
+              <div className="flex items-center gap-8 pt-2">
+                {[
+                  { value: "12K+", label: "PRs tracked" },
+                  { value: "3.2K", label: "Developers" },
+                  { value: "800+", label: "Repos" },
+                ].map(({ value, label }) => (
+                  <div key={label} className="flex flex-col gap-0.5">
+                    <span className="text-2xl font-bold text-foreground">
+                      {value}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {label}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Right: animated timeline — desktop only */}
+            {/* Right: animated PR cards — desktop only */}
             <div className="hidden md:block">
               <AnimatedTimeline />
             </div>
@@ -428,7 +435,7 @@ export default async function HomePage() {
                   delay: 0.1,
                 },
                 {
-                  icon: <GitPullRequest className="h-6 w-6" />,
+                  icon: <GitPullRequestArrow className="h-6 w-6" />,
                   name: "PR Card with Stats",
                   body: "Every PR shows its title, body summary, additions, deletions, and commit count in one sharp card.",
                   accent: "text-[hsl(152,69%,45%)]",
