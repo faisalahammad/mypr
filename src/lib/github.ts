@@ -150,6 +150,27 @@ export const getAllMergedPRs = async (
   )
 }
 
+// Fetch users that the authenticated user is following on GitHub
+export const getGitHubFollowing = async (accessToken: string): Promise<string[]> => {
+  const octokit = createOctokit(accessToken)
+  const logins: string[] = []
+  let page = 1
+
+  while (true) {
+    const { data } = await octokit.request('GET /user/following', {
+      per_page: 100,
+      page,
+      headers: { 'X-GitHub-Api-Version': '2022-11-28' }
+    })
+    if (!data.length) break
+    data.forEach((u: { login: string }) => logins.push(u.login))
+    if (data.length < 100) break
+    page++
+  }
+
+  return logins
+}
+
 // Validate GitHub access token
 export const validateToken = async (accessToken: string): Promise<boolean> => {
   try {
