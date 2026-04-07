@@ -11,6 +11,7 @@ import {
   GitPullRequestArrow,
   Lock,
   Sparkles,
+  Terminal,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -201,104 +202,94 @@ export default async function HomePage() {
       <main className="overflow-x-hidden bg-background text-foreground">
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
-        <section className="relative flex min-h-screen items-center">
-          {/* Subtle background glow */}
-          <div
-            className="pointer-events-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div
-              className="absolute -left-32 top-1/3 h-[500px] w-[500px] rounded-full bg-primary/8 blur-[140px]"
-              style={{ animation: "glow-pulse 7s ease-in-out infinite" }}
-            />
-            <div
-              className="absolute -right-32 top-1/4 h-[400px] w-[400px] rounded-full bg-[hsl(330,80%,60%)]/6 blur-[120px]"
-              style={{ animation: "glow-pulse 9s ease-in-out infinite 1.5s" }}
-            />
+        {/* Exact structure from Lovable source (lC component) */}
+        <section className="relative flex min-h-screen items-center overflow-hidden">
+          {/* Blob backgrounds — exact positions/sizes/colours from source */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+            <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[hsl(262,83%,58%,0.08)] blur-3xl animate-blob" />
+            <div className="absolute top-1/3 -right-32 w-80 h-80 rounded-full bg-[hsl(330,80%,60%,0.08)] blur-3xl animate-blob-delay-2" />
+            <div className="absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-[hsl(172,66%,50%,0.06)] blur-3xl animate-blob-delay-4" />
           </div>
 
-          <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-16 px-6 py-24 lg:grid-cols-2 lg:gap-24">
+          <div className="relative mx-auto grid max-w-6xl grid-cols-1 gap-12 px-6 py-24 lg:grid-cols-2 lg:gap-16">
 
             {/* Left: copy + CTA */}
-            <div className="flex flex-col gap-7">
+            <div className="flex flex-col justify-center">
 
-              {/* Badge */}
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 shadow-sm">
+              {/* Badge — exact from source */}
+              <div className="inline-flex items-center gap-2 w-fit rounded-full border border-border bg-card px-4 py-1.5 mb-6 shadow-sm">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <span className="font-mono text-xs font-medium text-foreground">
+                <span className="font-mono text-xs text-muted-foreground">
                   Built for developers who ship
                 </span>
               </div>
 
-              {/* Headline — 3 lines, exact colours from screenshot */}
-              <h1 className="text-5xl font-bold leading-[1.08] tracking-tight lg:text-[3.5rem] lg:leading-[1.1]">
-                Login with GitHub,
-                <br />
-                <span className="bg-gradient-to-r from-[hsl(262,83%,58%)] to-[hsl(330,80%,60%)] bg-clip-text text-transparent">
-                  start building your
+              {/* Headline — "Login with GitHub, " plain + gradient-text span */}
+              <h1 className="font-heading text-4xl font-bold leading-tight text-foreground sm:text-5xl lg:text-[3.5rem] lg:leading-[1.12]">
+                Login with GitHub,{" "}
+                <span className="gradient-text">
+                  start building your timeline.
                 </span>
-                <br />
-                <span className="text-[hsl(25,95%,60%)]">timeline.</span>
               </h1>
 
               {/* Subtitle */}
-              <p className="max-w-[480px] text-base leading-relaxed text-muted-foreground">
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground">
                 Every merged PR you have ever shipped, in one place. Documented,
                 shareable, and connected to the open source community.
               </p>
 
-              {/* Terminal code block */}
-              <div className="max-w-[420px] rounded-xl border border-border bg-secondary/60 px-4 py-3">
-                <p className="mb-1.5 font-mono text-[11px] text-muted-foreground">
-                  &gt;_ terminal
-                </p>
-                <p className="font-mono text-sm">
-                  <span className="text-[hsl(152,69%,45%)]">$ </span>
-                  <span className="text-foreground">mypr timeline </span>
-                  <span className="text-[hsl(213,94%,58%)]">--user </span>
-                  <span className="text-foreground">faisalahammad</span>
-                </p>
+              {/* Terminal block — exact from source */}
+              <div className="mt-6 rounded-lg border border-border bg-foreground/[0.03] p-3 max-w-md font-mono text-xs">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Terminal className="h-3.5 w-3.5" />
+                  <span>terminal</span>
+                </div>
+                <div className="text-foreground">
+                  <span className="text-primary">$</span>{" "}
+                  mypr timeline{" "}
+                  <span className="text-[hsl(152,69%,45%)]">--user</span>{" "}
+                  faisalahammad
+                  <span className="animate-cursor ml-0.5 text-primary">▊</span>
+                </div>
               </div>
 
-              {/* CTA */}
-              <div className="flex flex-wrap items-center gap-4">
+              {/* CTA — gradient-bg button exact from source */}
+              <div className="mt-8 flex items-center gap-4">
                 <a
                   href="/login"
                   className={cn(
                     buttonVariants({ size: "lg" }),
-                    "gap-2.5 rounded-xl bg-primary px-7 text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90"
+                    "gap-2 gradient-bg text-primary-foreground border-0 hover:opacity-90 rounded-xl px-7 shadow-lg shadow-[hsl(262,83%,58%,0.25)]"
                   )}
                 >
                   <GitPullRequestArrow className="h-5 w-5" />
                   Get Started Free
-                  <span aria-hidden="true">→</span>
+                  <span aria-hidden="true" className="ml-0.5">→</span>
                 </a>
-                <span className="font-mono text-sm text-muted-foreground">
+                <span className="text-xs text-muted-foreground font-mono">
                   No setup required
                 </span>
               </div>
 
-              {/* Stats */}
-              <div className="flex items-center gap-8 pt-2">
+              {/* Stats — font-display values, exact from source */}
+              <div className="mt-10 flex items-center gap-8">
                 {[
                   { value: "12K+", label: "PRs tracked" },
                   { value: "3.2K", label: "Developers" },
                   { value: "800+", label: "Repos" },
                 ].map(({ value, label }) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-2xl font-bold text-foreground">
+                  <div key={label}>
+                    <p className="text-xl font-bold text-foreground font-heading">
                       {value}
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {label}
-                    </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Right: animated PR cards — desktop only */}
-            <div className="hidden md:block">
+            {/* Right: PR cards — desktop only */}
+            <div className="hidden lg:block">
               <AnimatedTimeline />
             </div>
           </div>

@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { GitPullRequestArrow } from "lucide-react";
+import { GitMerge } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,13 +10,12 @@ interface PRCard {
   additions: number;
   deletions: number;
   commits: number;
-  username: string;
-  initials: string;
-  avatarBg: string;
-  topBorder: string;
+  user: string;
+  /** hsl string, e.g. "hsl(213 94% 58%)" */
+  color: string;
 }
 
-// ─── Mock data (matches screenshot) ──────────────────────────────────────────
+// ─── Mock data (exact from Lovable source) ────────────────────────────────────
 
 const MOCK_PRS: PRCard[] = [
   {
@@ -27,10 +24,8 @@ const MOCK_PRS: PRCard[] = [
     additions: 84,
     deletions: 12,
     commits: 4,
-    username: "faisalahammad",
-    initials: "FA",
-    avatarBg: "bg-[hsl(213,94%,58%)]",
-    topBorder: "border-t-[hsl(213,94%,58%)]",
+    user: "faisalahammad",
+    color: "hsl(213 94% 58%)",
   },
   {
     repo: "vercel/next.js",
@@ -38,10 +33,8 @@ const MOCK_PRS: PRCard[] = [
     additions: 210,
     deletions: 45,
     commits: 6,
-    username: "tanzid",
-    initials: "TA",
-    avatarBg: "bg-primary",
-    topBorder: "border-t-primary",
+    user: "tanzid",
+    color: "hsl(262 83% 58%)",
   },
   {
     repo: "pods-framework/pods",
@@ -49,10 +42,8 @@ const MOCK_PRS: PRCard[] = [
     additions: 133,
     deletions: 22,
     commits: 3,
-    username: "mdrakib",
-    initials: "MD",
-    avatarBg: "bg-[hsl(152,69%,45%)]",
-    topBorder: "border-t-[hsl(152,69%,45%)]",
+    user: "mdrakib",
+    color: "hsl(152 69% 45%)",
   },
   {
     repo: "nicehash/NiceHashQuickMiner",
@@ -60,10 +51,8 @@ const MOCK_PRS: PRCard[] = [
     additions: 56,
     deletions: 8,
     commits: 2,
-    username: "sabbir",
-    initials: "SA",
-    avatarBg: "bg-[hsl(25,95%,60%)]",
-    topBorder: "border-t-[hsl(25,95%,60%)]",
+    user: "sabbir",
+    color: "hsl(25 95% 60%)",
   },
   {
     repo: "roots/sage",
@@ -71,81 +60,67 @@ const MOCK_PRS: PRCard[] = [
     additions: 44,
     deletions: 17,
     commits: 5,
-    username: "nahid",
-    initials: "NA",
-    avatarBg: "bg-[hsl(330,80%,60%)]",
-    topBorder: "border-t-[hsl(330,80%,60%)]",
+    user: "nahid",
+    color: "hsl(330 80% 60%)",
   },
 ];
 
-// ─── Animation timing (ms) ────────────────────────────────────────────────────
+function initials(user: string) {
+  return user.slice(0, 2).toUpperCase();
+}
 
-const CARD_DURATION = 800;
-const STAGGER = 180;
-const HOLD = 4000;
-const EXIT = 800;
-const ALL_IN = (MOCK_PRS.length - 1) * STAGGER + CARD_DURATION;
+// ─── PR Card (exact Lovable source structure) ─────────────────────────────────
 
-// ─── Framer Motion variants ───────────────────────────────────────────────────
-
-const containerVariants: Variants = {
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: STAGGER / 1000 },
-  },
-  hidden: { opacity: 0 },
-};
-
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: CARD_DURATION / 1000, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-// ─── PR Card ─────────────────────────────────────────────────────────────────
-
-function Card({ pr }: { pr: PRCard }) {
+function Card({ pr, index }: { pr: PRCard; index: number }) {
   return (
     <div
-      className={`rounded-xl border border-border border-t-2 bg-card px-4 py-3.5 shadow-sm ${pr.topBorder}`}
+      className={`animate-card-drift-${index + 1} glow-card rounded-xl border border-border bg-card p-5 shadow-sm relative overflow-hidden`}
     >
+      {/* 1px colour stripe at top (exact from source: h-0.5, absolute) */}
+      <div
+        className="absolute top-0 left-0 right-0 h-0.5"
+        style={{ background: pr.color }}
+      />
+
       {/* Repo */}
-      <p className="mb-1.5 font-mono text-xs text-muted-foreground">
-        {pr.repo}
-      </p>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[11px] font-medium text-muted-foreground">
+          {pr.repo}
+        </span>
+      </div>
 
       {/* Title */}
-      <p className="mb-2 text-sm font-semibold leading-snug text-foreground">
+      <p className="mt-1.5 text-sm font-semibold text-foreground leading-snug">
         {pr.title}
       </p>
 
       {/* Stats */}
-      <p className="mb-3 font-mono text-xs text-muted-foreground">
-        <span className="font-semibold text-[hsl(152,69%,45%)]">
-          +{pr.additions}
-        </span>{" "}
-        <span className="font-semibold text-destructive">-{pr.deletions}</span>
-        {"  ·  "}
-        {pr.commits} commits
-      </p>
+      <div className="mt-2.5 flex items-center gap-3">
+        <span className="font-mono text-xs">
+          <span className="text-[hsl(152,69%,45%)]">+{pr.additions}</span>{" "}
+          <span className="text-destructive">−{pr.deletions}</span>
+        </span>
+        <span className="text-xs text-muted-foreground">
+          · {pr.commits} commits
+        </span>
+      </div>
 
       {/* Footer: merged badge + user */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 rounded-full bg-[hsl(152,69%,45%)] px-2.5 py-1 text-xs font-medium text-white">
-          <GitPullRequestArrow className="h-3 w-3" />
+      <div className="mt-3 flex items-center justify-between">
+        <div className="inline-flex items-center gap-1 rounded-full bg-[hsl(152,69%,45%)] px-2.5 py-0.5 font-mono text-[10px] text-white">
+          <GitMerge className="h-3 w-3" />
           Merged
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-muted-foreground">
-            {pr.username}
+            {pr.user}
           </span>
+          {/* Avatar colour driven by card colour, exact from source */}
           <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full font-mono text-[9px] font-bold text-white ${pr.avatarBg}`}
+            className="h-6 w-6 rounded-full flex items-center justify-center font-mono text-[10px] font-bold text-white"
+            style={{ background: pr.color }}
           >
-            {pr.initials}
+            {initials(pr.user)}
           </div>
         </div>
       </div>
@@ -154,60 +129,15 @@ function Card({ pr }: { pr: PRCard }) {
 }
 
 // ─── Animated Timeline ────────────────────────────────────────────────────────
+// Animation is pure CSS (card-drift-up keyframe + staggered delays).
+// No Framer Motion loop — matches Lovable source exactly.
 
 export default function AnimatedTimeline() {
-  const prefersReducedMotion = useReducedMotion();
-  const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
-  const [cycleKey, setCycleKey] = useState(0);
-
-  useEffect(() => {
-    if (prefersReducedMotion) return;
-
-    if (phase === "in") {
-      const t = setTimeout(() => setPhase("hold"), ALL_IN);
-      return () => clearTimeout(t);
-    }
-    if (phase === "hold") {
-      const t = setTimeout(() => setPhase("out"), HOLD);
-      return () => clearTimeout(t);
-    }
-    if (phase === "out") {
-      const t = setTimeout(() => {
-        setCycleKey((k) => k + 1);
-        setPhase("in");
-      }, EXIT);
-      return () => clearTimeout(t);
-    }
-  }, [phase, prefersReducedMotion]);
-
-  if (prefersReducedMotion) {
-    return (
-      <div className="flex flex-col gap-3">
-        {MOCK_PRS.map((pr) => (
-          <Card key={pr.repo} pr={pr} />
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <motion.div
-      key={cycleKey}
-      variants={containerVariants}
-      initial="hidden"
-      animate={phase === "out" ? "hidden" : "visible"}
-      transition={
-        phase === "out"
-          ? { duration: EXIT / 1000, ease: "easeIn" }
-          : undefined
-      }
-      className="flex flex-col gap-3"
-    >
-      {MOCK_PRS.map((pr) => (
-        <motion.div key={pr.repo} variants={cardVariants}>
-          <Card pr={pr} />
-        </motion.div>
+    <div className="flex flex-col gap-3">
+      {MOCK_PRS.map((pr, i) => (
+        <Card key={pr.repo} pr={pr} index={i} />
       ))}
-    </motion.div>
+    </div>
   );
 }

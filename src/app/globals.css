@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -63,14 +65,6 @@
   --ring: hsl(262, 83%, 58%);
   --radius: 0.75rem;
 
-  /* ── Extended accent palette ─────────────────────────────────────────── */
-  --gradient-start: hsl(262, 83%, 58%);
-  --gradient-end: hsl(330, 80%, 60%);
-  --accent-green: hsl(152, 69%, 45%);
-  --accent-blue: hsl(213, 94%, 58%);
-  --accent-orange: hsl(25, 95%, 60%);
-  --accent-cyan: hsl(185, 72%, 48%);
-
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   --sidebar: hsl(0, 0%, 98%);
   --sidebar-foreground: hsl(225, 30%, 8%);
@@ -97,12 +91,111 @@
   }
 }
 
-@keyframes marquee {
-  from { transform: translateX(0%); }
-  to   { transform: translateX(-50%); }
+/* ─── Lovable custom utilities ──────────────────────────────────────────────── */
+
+.gradient-text {
+  background: linear-gradient(135deg, #7c3bed, #eb4799, #fa8938);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-@keyframes glow-pulse {
-  0%, 100% { opacity: 0.3; }
-  50%       { opacity: 0.6; }
+.gradient-bg {
+  background: linear-gradient(135deg, #7c3bed, #eb4799);
+}
+
+.gradient-bg-subtle {
+  background: linear-gradient(135deg, #7c3bed0f, #eb47990f, #2bd4bd0a);
+}
+
+.glow-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.glow-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px -8px #7c3bed2e, 0 4px 12px -4px #eb47991a;
+}
+
+.fade-up-element {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fade-up-element.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Keyframes ─────────────────────────────────────────────────────────────── */
+
+@keyframes card-drift-up {
+  0%  { opacity: 0; transform: translateY(60px) scale(0.97); }
+  to  { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@keyframes blob-float {
+  0%, to { transform: translate(0)         scale(1);    }
+  33%    { transform: translate(30px,-40px) scale(1.05); }
+  66%    { transform: translate(-20px,20px) scale(0.95); }
+}
+
+@keyframes blink-cursor {
+  0%, to { opacity: 1; }
+  50%    { opacity: 0; }
+}
+
+@keyframes gentle-pulse {
+  0%, to { box-shadow: 0 0 0 0  #7c3bed66; }
+  50%    { box-shadow: 0 0 0 10px #7c3bed00; }
+}
+
+@keyframes shimmer {
+  0%  { background-position: -200% 0; }
+  to  { background-position:  200% 0; }
+}
+
+/* ─── Animation utility classes ─────────────────────────────────────────────── */
+
+.animate-card-drift-1 { animation: card-drift-up 1s cubic-bezier(0.16,1,0.3,1)  0.30s both; }
+.animate-card-drift-2 { animation: card-drift-up 1s cubic-bezier(0.16,1,0.3,1)  0.55s both; }
+.animate-card-drift-3 { animation: card-drift-up 1s cubic-bezier(0.16,1,0.3,1)  0.80s both; }
+.animate-card-drift-4 { animation: card-drift-up 1s cubic-bezier(0.16,1,0.3,1)  1.05s both; }
+.animate-card-drift-5 { animation: card-drift-up 1s cubic-bezier(0.16,1,0.3,1)  1.30s both; }
+
+.animate-blob          { animation: blob-float 8s ease-in-out          infinite; }
+.animate-blob-delay-2  { animation: blob-float 8s ease-in-out  2s      infinite; }
+.animate-blob-delay-4  { animation: blob-float 8s ease-in-out  4s      infinite; }
+
+.animate-cursor        { animation: blink-cursor  1s step-end                     infinite; }
+.animate-gentle-pulse  { animation: gentle-pulse  2s cubic-bezier(0.4,0,0.6,1)   infinite; }
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, hsl(262 83% 58% / 0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* ─── Reduced motion ────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-card-drift-1,
+  .animate-card-drift-2,
+  .animate-card-drift-3,
+  .animate-card-drift-4,
+  .animate-card-drift-5 { animation: none; opacity: 1; transform: none; }
+
+  .animate-blob,
+  .animate-blob-delay-2,
+  .animate-blob-delay-4 { animation: none; }
+
+  .animate-cursor        { animation: none; opacity: 1; }
+  .animate-gentle-pulse  { animation: none; }
+  .animate-shimmer       { animation: none; }
+
+  .fade-up-element {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
