@@ -22,7 +22,9 @@ export default function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
   const [syncInfo, setSyncInfo] = useState<SyncResponse | null>(null)
-  const supabase = createSupabaseClient()
+
+  // Create Supabase client only when needed (not at component top level)
+  const getSupabase = () => createSupabaseClient()
 
   const fetchSyncStatus = async () => {
     try {
