@@ -65,21 +65,21 @@ Update MEMORY.md at the end of each session to reflect progress.
 
 ---
 
-## Phase 4: GitHub PR Sync
+## Phase 4: GitHub PR Sync ✅ COMPLETE
 
-- [ ] **4.1 — Set up Octokit client**
+- [x] **4.1 — Set up Octokit client**
   Configure an authenticated Octokit instance using the user's stored `github_access_token`. Wrap it in a factory function in `lib/github.ts`.
   _Files: `lib/github.ts`_
 
-- [ ] **4.2 — Fetch merged PRs from GitHub**
+- [x] **4.2 — Fetch merged PRs from GitHub**
   Write a function that queries the GitHub search API for merged PRs by a user across their active repos. Extract: title, body (truncate to 150 chars), URL, merged_at, additions, deletions, commits count.
   _Files: `lib/github.ts`_
 
-- [ ] **4.3 — Build the sync API route**
+- [x] **4.3 — Build the sync API route**
   Create `POST /api/sync-prs`. Validate session. Fetch the user's active repos from `repositories` table. Call the GitHub fetch function. Upsert results into `pull_requests` table. Return count of synced PRs.
   _Files: `app/api/sync-prs/route.ts`_
 
-- [ ] **4.4 — Add sync trigger to settings page**
+- [x] **4.4 — Add sync trigger to settings page**
   Add a "Sync PRs" button to the settings page that calls `POST /api/sync-prs` and shows synced count or error. Disable the button while syncing.
   _Files: `app/(app)/settings/page.tsx`_
 
