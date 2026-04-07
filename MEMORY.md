@@ -7,9 +7,9 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 
 ## Current Status
 
-**Phase:** Phase 8 — Follow System 🚧 READY TO START
-**Last completed:** Phase 7 — Home Feed (2026-04-07)
-**Next:** Task 8.1 — Build follow/unfollow API routes
+**Phase:** Phase 9 — Screenshot Download 🚧 READY TO START
+**Last completed:** Phase 8 — Follow System (2026-04-07)
+**Next:** Task 9.1 — Install html2canvas and create download utility
 
 ---
 
@@ -31,6 +31,13 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 - ✅ **Comprehensive Testing** - 124 tests passing (27 new in Phase 7)
 - ✅ **Build Verification** - TypeScript compilation successful
 - ✅ **Git Commit & Push** - Committed Phase 7
+- ✅ **Phase 8: Follow System** - Fully implemented with tests
+- ✅ **Follow/Unfollow API** - POST and DELETE /api/follow with session validation
+- ✅ **FollowButton Component** - Optimistic UI with error revert
+- ✅ **Profile Page Integration** - Follow button shown to authenticated non-owners
+- ✅ **GitHub Follow Sync** - Auto-syncs GitHub following list on every login
+- ✅ **18 new tests** - follow-schema.test.ts (10) + follow-button.test.tsx (8)
+- ✅ **Git Commit & Push** - Committed Phase 8 (94828bc)
 
 ### Time Breakdown
 - Phase 6 task creation and planning (5 tasks created)
@@ -605,4 +612,4 @@ All Phase 6 blockers resolved. Ready for Phase 7 implementation.
 
 ---
 
-**Last updated:** 2026-04-07 (Phase 7 complete, all blockers resolved, 124 tests passing, ready for Phase 8)
+**Last updated:** 2026-04-07 (Phase 8 complete, 142 tests passing, ready for Phase 9)
