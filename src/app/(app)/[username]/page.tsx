@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createSupabaseServerClient, getUser, isFollowing } from '@/lib/supabase'
-import { Timeline } from '@/components/timeline/Timeline'
+import { DownloadableTimeline } from '@/components/timeline/DownloadableTimeline'
 import { FollowButton } from '@/components/FollowButton'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -134,7 +134,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         </Card>
 
         {/* Timeline */}
-        <Timeline
+        <DownloadableTimeline
           prs={prsWithProfile}
           emptyMessage="No pull requests yet. Check back soon!"
         />

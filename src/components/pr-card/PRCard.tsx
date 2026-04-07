@@ -1,9 +1,10 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { ExternalLink } from 'lucide-react'
+import { Download, ExternalLink } from 'lucide-react'
+import { downloadAsImage } from '@/lib/utils'
 import type { PullRequest } from '@/types'
 
 interface PRCardProps {
@@ -45,7 +46,22 @@ function formatMergedDate(dateString: string): string {
  * - Link to GitHub PR
  */
 export function PRCard({ pr }: PRCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    if (!cardRef.current) return
+    setDownloading(true)
+    try {
+      const filename = `pr-${pr.repo_full_name.replace('/', '-')}-${pr.pr_number}.png`
+      await downloadAsImage(cardRef.current, filename)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
+    <div ref={cardRef}>
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{pr.title}</CardTitle>
@@ -83,7 +99,7 @@ export function PRCard({ pr }: PRCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter>
+      <CardFooter className="flex items-center justify-between">
         <a
           href={pr.pr_url}
           target="_blank"
@@ -93,7 +109,16 @@ export function PRCard({ pr }: PRCardProps) {
           View on GitHub
           <ExternalLink className="h-3 w-3" />
         </a>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          aria-label="Download PR card as image"
+          className="inline-flex items-center justify-center rounded-lg text-sm font-medium hover:bg-muted hover:text-foreground transition-colors gap-2 px-2.5 h-7 disabled:opacity-50"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </button>
       </CardFooter>
     </Card>
+    </div>
   )
 }
