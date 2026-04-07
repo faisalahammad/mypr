@@ -7,9 +7,9 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 
 ## Current Status
 
-**Phase:** Phase 9 — Screenshot Download 🚧 READY TO START
-**Last completed:** Phase 8 — Follow System (2026-04-07)
-**Next:** Task 9.1 — Install html2canvas and create download utility in lib/utils.ts
+**Phase:** Phase 10 — Polish and Deploy 🚧 READY TO START
+**Last completed:** Phase 9 — Screenshot Download (2026-04-07)
+**Next:** Task 10.1 — Add page metadata and OG images
 
 ---
 
@@ -24,12 +24,14 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 - After Phase 6: 97 tests
 - After Phase 7: 124 tests (+27)
 - After Phase 8: 142 tests (+18)
+- After Phase 9: 161 tests (+19) — 155 passing, 6 pre-existing settings failures
 
 ### Git Commits
 - `b27d48b` — feat: implement Phase 6 - Profile Page
 - `fe32552` — feat: implement Phase 7 - Home Feed with pagination and loading states
 - `94828bc` — feat: implement Phase 8 - Follow System
 - `6a0db1e` — docs: update MEMORY.md with Phase 8 completion
+- `0b30fce` — feat: implement Phase 9 - Screenshot Download
 
 ---
 
@@ -179,4 +181,11 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 
 ---
 
-**Last updated:** 2026-04-07 (Phase 8 complete, 142 tests passing, build clean, ready for Phase 9)
+### Phase 9: Screenshot Download ✅
+- `src/lib/utils.ts` — added `downloadAsImage(element, filename)` using html2canvas with dynamic import (client-only)
+- `src/components/pr-card/PRCard.tsx` — added Download icon button in footer with `useRef` on card container, loading state while capturing
+- `src/components/timeline/DownloadableTimeline.tsx` — new client wrapper around Timeline with "Download Timeline" button; button hidden when no PRs
+- `src/app/(app)/[username]/page.tsx` — replaced `Timeline` with `DownloadableTimeline`
+- Tests: `tests/unit/download-utils.test.ts` (6), `tests/component/downloadable-timeline.test.tsx` (11), 2 additions to `pr-card.test.tsx`
+
+**Last updated:** 2026-04-07 (Phase 9 complete, 155 tests passing, build clean, ready for Phase 10)
