@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { GitPullRequest } from "lucide-react";
 
-// ─── Mock PR Data ────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface MockPR {
+interface PRCard {
   repo: string;
   title: string;
   additions: number;
@@ -18,7 +18,9 @@ interface MockPR {
   avatarColor: string;
 }
 
-const MOCK_PRS: MockPR[] = [
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+const MOCK_PRS: PRCard[] = [
   {
     repo: "wordpress/gutenberg",
     title: "Fix taxonomy query when meta_query is empty",
@@ -29,7 +31,7 @@ const MOCK_PRS: MockPR[] = [
       "Prevents fatal when post meta query is applied without a base taxonomy query. Adds regression test for the edge case.",
     username: "faisal_a",
     initials: "FA",
-    avatarColor: "bg-violet-500",
+    avatarColor: "bg-primary",
   },
   {
     repo: "vercel/next.js",
@@ -81,59 +83,80 @@ const MOCK_PRS: MockPR[] = [
   },
 ];
 
-// ─── Timing constants (ms) ────────────────────────────────────────────────────
+// ─── Animation timing (ms) ────────────────────────────────────────────────────
 
 const CARD_DURATION = 800;
 const STAGGER = 200;
 const HOLD = 4000;
 const EXIT = 800;
-// Time for the last card to finish entering
 const ALL_IN = (MOCK_PRS.length - 1) * STAGGER + CARD_DURATION;
 
-// ─── PR Card ─────────────────────────────────────────────────────────────────
+// ─── Container variants (stagger children) ────────────────────────────────────
 
-function PRCard({ pr }: { pr: MockPR }) {
+const containerVariants: Variants = {
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: STAGGER / 1000,
+    },
+  },
+  hidden: {
+    opacity: 0,
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: CARD_DURATION / 1000, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+// ─── PR Card (light theme) ────────────────────────────────────────────────────
+
+function Card({ pr }: { pr: PRCard }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white px-4 py-3.5 shadow-sm">
-      {/* Repo row */}
+    <div className="rounded-xl border border-border bg-card px-4 py-3.5 shadow-sm shadow-black/5">
       <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+        <div className="flex items-center gap-1.5 font-mono text-xs font-medium text-muted-foreground">
           <GitPullRequest className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{pr.repo}</span>
         </div>
-        {/* Merged badge */}
-        <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+        <div className="flex items-center gap-1 rounded-full bg-[hsl(152,69%,45%)]/10 px-2 py-0.5 text-xs font-medium text-[hsl(152,69%,45%)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152,69%,45%)]" />
           Merged
         </div>
       </div>
 
-      {/* Title */}
-      <p className="mb-1.5 text-sm font-semibold leading-snug text-gray-900">
+      <p className="mb-1.5 text-sm font-semibold leading-snug text-foreground">
         {pr.title}
       </p>
 
-      {/* Summary */}
-      <p className="mb-2.5 line-clamp-2 text-xs leading-relaxed text-gray-500">
+      <p className="mb-2.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
         {pr.summary}
       </p>
 
-      {/* Stats + avatar row */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs text-gray-400">
-          <span className="font-medium text-green-600">+{pr.additions}</span>
-          <span>−</span>
-          <span className="font-medium text-red-500">{pr.deletions}</span>
-          <span className="mx-0.5">·</span>
+        <div className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+          <span className="font-semibold text-[hsl(152,69%,45%)]">
+            +{pr.additions}
+          </span>
+          <span className="text-border">−</span>
+          <span className="font-semibold text-destructive">{pr.deletions}</span>
+          <span className="mx-0.5 text-border">·</span>
           <span>{pr.commits} commits</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div
-            className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ${pr.avatarColor}`}
+            className={`flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9px] font-bold text-white ${pr.avatarColor}`}
           >
             {pr.initials}
           </div>
-          <span className="text-xs text-gray-400">@{pr.username}</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            @{pr.username}
+          </span>
         </div>
       </div>
     </div>
@@ -167,12 +190,11 @@ export default function AnimatedTimeline() {
     }
   }, [phase, prefersReducedMotion]);
 
-  // Reduced motion: static render
   if (prefersReducedMotion) {
     return (
       <div className="flex flex-col gap-3">
         {MOCK_PRS.map((pr) => (
-          <PRCard key={pr.repo} pr={pr} />
+          <Card key={pr.repo} pr={pr} />
         ))}
       </div>
     );
@@ -181,22 +203,17 @@ export default function AnimatedTimeline() {
   return (
     <motion.div
       key={cycleKey}
-      animate={phase === "out" ? { opacity: 0 } : { opacity: 1 }}
-      transition={phase === "out" ? { duration: EXIT / 1000, ease: "easeIn" } : {}}
+      variants={containerVariants}
+      initial="hidden"
+      animate={phase === "out" ? "hidden" : "visible"}
+      transition={
+        phase === "out" ? { duration: EXIT / 1000, ease: "easeIn" } : undefined
+      }
       className="flex flex-col gap-3"
     >
-      {MOCK_PRS.map((pr, i) => (
-        <motion.div
-          key={pr.repo}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: CARD_DURATION / 1000,
-            ease: "easeOut",
-            delay: (i * STAGGER) / 1000,
-          }}
-        >
-          <PRCard pr={pr} />
+      {MOCK_PRS.map((pr) => (
+        <motion.div key={pr.repo} variants={cardVariants}>
+          <Card pr={pr} />
         </motion.div>
       ))}
     </motion.div>

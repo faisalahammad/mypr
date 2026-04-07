@@ -34,11 +34,13 @@ function GitHubIcon({ className }: { className?: string }) {
 
 function LogoMark() {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-900">
-        <span className="text-xs font-bold text-white">M</span>
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+        <span className="font-mono text-xs font-bold text-primary-foreground">
+          M
+        </span>
       </div>
-      <span className="text-sm font-semibold tracking-tight text-gray-900">
+      <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
         mypr.pro.bd
       </span>
     </div>
@@ -71,54 +73,61 @@ const MOCK_BROWSER_PRS = [
 function BrowserMockup() {
   return (
     <div className="relative mx-auto max-w-2xl">
-      <div className="overflow-hidden rounded-xl border border-gray-200 shadow-2xl shadow-gray-300/50">
+      <div className="absolute -inset-4 rounded-2xl bg-primary/10 blur-2xl" />
+
+      <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/5">
         {/* Chrome bar */}
-        <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-border bg-muted px-4 py-3">
           <div className="flex gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-            <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-            <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(45,90%,55%)]/70" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(152,69%,45%)]/70" />
           </div>
-          <div className="flex flex-1 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-400">
+          <div className="flex flex-1 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 font-mono text-xs text-muted-foreground">
             <Lock className="h-3 w-3 shrink-0" />
             <span>mypr.pro.bd/@username</span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="bg-white p-5">
+        <div className="bg-background p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="font-mono text-sm font-semibold text-foreground">
                 @username
               </p>
-              <p className="text-xs text-gray-400">12 merged PRs across 5 repos</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                12 merged PRs across 5 repos
+              </p>
             </div>
-            <div className="h-8 w-8 rounded-full bg-violet-500 text-[10px] font-bold text-white flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold text-primary-foreground">
               US
             </div>
           </div>
+
           <div className="flex flex-col gap-2.5">
             {MOCK_BROWSER_PRS.map((pr) => (
               <div
                 key={pr.repo}
-                className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5"
+                className="rounded-lg border border-border bg-card px-3 py-2.5"
               >
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">{pr.repo}</span>
-                  <span className="flex items-center gap-1 text-xs font-medium text-green-600">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {pr.repo}
+                  </span>
+                  <span className="flex items-center gap-1 font-mono text-xs font-medium text-[hsl(152,69%,45%)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152,69%,45%)]" />
                     Merged
                   </span>
                 </div>
-                <p className="truncate text-sm font-medium text-gray-800">
+                <p className="truncate text-sm font-medium text-foreground">
                   {pr.title}
                 </p>
-                <div className="mt-1 text-xs text-gray-400">
-                  <span className="font-medium text-green-600">
+                <div className="mt-1 font-mono text-xs text-muted-foreground">
+                  <span className="font-semibold text-[hsl(152,69%,45%)]">
                     +{pr.additions}
                   </span>{" "}
-                  <span className="font-medium text-red-400">
+                  <span className="font-semibold text-destructive">
                     −{pr.deletions}
                   </span>
                 </div>
@@ -131,12 +140,45 @@ function BrowserMockup() {
       {/* Pulsing download button */}
       <div className="absolute bottom-4 right-4">
         <div className="relative">
-          <span className="absolute -inset-1 animate-ping rounded-lg bg-gray-900 opacity-10" />
-          <div className="relative flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white shadow-lg">
+          <span className="absolute -inset-1 animate-ping rounded-lg bg-primary opacity-20" />
+          <div className="relative flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-mono text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30">
             <Download className="h-3.5 w-3.5" />
             Download PNG
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Marquee Strip ────────────────────────────────────────────────────────────
+
+const MARQUEE_ITEMS = [
+  "42,000+ PRs documented",
+  "Timeline downloads as PNG",
+  "Public profile for every developer",
+  "Follow your favourite contributors",
+  "Synced from GitHub automatically",
+  "No AI — deterministic and fast",
+];
+
+function MarqueeStrip() {
+  const doubled = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
+  return (
+    <div className="overflow-hidden border-y border-border bg-muted/50 py-3">
+      <div
+        className="flex whitespace-nowrap"
+        style={{ animation: "marquee 30s linear infinite" }}
+      >
+        {doubled.map((item, i) => (
+          <span
+            key={i}
+            className="flex items-center font-mono text-xs font-medium tracking-wide text-muted-foreground"
+          >
+            <span className="mx-6 text-primary">◆</span>
+            {item}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -155,37 +197,96 @@ export default async function HomePage() {
     <>
       <FloatingNav />
 
-      <main className="overflow-x-hidden bg-white text-gray-900">
+      <main className="overflow-x-hidden bg-background text-foreground">
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
-        <section className="relative flex min-h-screen items-center border-b border-gray-100">
-          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-6 py-24 lg:grid-cols-2 lg:gap-20">
+        <section className="relative flex min-h-screen items-center">
+          {/* Background decorations */}
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div
+              className="absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]"
+              style={{ animation: "glow-pulse 6s ease-in-out infinite" }}
+            />
+            <div
+              className="absolute -bottom-20 -right-20 h-[400px] w-[400px] rounded-full bg-[hsl(172,66%,50%)]/10 blur-[100px]"
+              style={{ animation: "glow-pulse 8s ease-in-out infinite 2s" }}
+            />
+            <div
+              className="absolute inset-0 opacity-[0.025]"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle, hsl(262,83%,58%) 1px, transparent 1px)",
+                backgroundSize: "32px 32px",
+              }}
+            />
+          </div>
+
+          <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-6 py-24 lg:grid-cols-2 lg:gap-20">
 
             {/* Left: copy + CTA */}
-            <div className="flex flex-col gap-7">
-              <h1 className="font-heading text-5xl font-bold leading-[1.08] tracking-tight text-gray-900 lg:text-6xl xl:text-7xl">
-                Login with GitHub,{" "}
-                <br className="hidden sm:block" />
-                start building{" "}
-                <br className="hidden sm:block" />
-                your timeline.
+            <div className="flex flex-col gap-8">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152,69%,45%)]" />
+                <span className="font-mono text-xs font-medium text-primary">
+                  Open source · Free to use
+                </span>
+              </div>
+
+              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight lg:text-[3.5rem] lg:leading-[1.12]">
+                Every merged PR
+                <br />
+                you&apos;ve ever shipped.
+                <br />
+                <span className="bg-gradient-to-r from-[hsl(262,83%,58%)] to-[hsl(330,80%,60%)] bg-clip-text text-transparent">
+                  One&nbsp;beautiful timeline.
+                </span>
               </h1>
-              <p className="max-w-md text-lg leading-relaxed text-gray-500">
-                Every merged PR you have ever shipped, in one place. Documented,
-                shareable, and connected to the open source community that built
-                it with you.
+
+              <p className="max-w-md text-lg leading-relaxed text-muted-foreground">
+                Connect GitHub, choose your repos, and get a public timeline of
+                every contribution you&apos;ve made to open source — shareable in
+                seconds.
               </p>
-              <div>
+
+              <div className="flex flex-wrap items-center gap-4">
                 <a
                   href="/login"
                   className={cn(
                     buttonVariants({ size: "lg" }),
-                    "gap-2.5 rounded-xl bg-gray-900 px-7 text-white hover:bg-gray-700",
+                    "gap-2.5 rounded-xl bg-primary px-7 text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90"
                   )}
                 >
                   <GitHubIcon className="h-5 w-5" />
                   Login with GitHub
                 </a>
+                <span className="font-mono text-sm text-muted-foreground">
+                  Free · No credit card
+                </span>
+              </div>
+
+              {/* Social proof */}
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2">
+                  {[
+                    "bg-primary",
+                    "bg-sky-500",
+                    "bg-[hsl(152,69%,45%)]",
+                    "bg-[hsl(25,95%,60%)]",
+                  ].map((color, i) => (
+                    <div
+                      key={i}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-background font-mono text-[9px] font-bold text-white ${color}`}
+                    >
+                      {["FA", "TD", "LN", "MR"][i]}
+                    </div>
+                  ))}
+                </div>
+                <p className="font-mono text-xs text-muted-foreground">
+                  Joined by contributors from Vercel, WordPress &amp; more
+                </p>
               </div>
             </div>
 
@@ -196,45 +297,96 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* ── Marquee ───────────────────────────────────────────────────────── */}
+        <MarqueeStrip />
+
+        {/* ── Stats ─────────────────────────────────────────────────────────── */}
+        <section className="border-b border-border py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+              {[
+                {
+                  value: "42k+",
+                  label: "PRs documented",
+                  accent: "text-primary",
+                },
+                {
+                  value: "100%",
+                  label: "From your GitHub — no manual entry",
+                  accent: "text-[hsl(152,69%,45%)]",
+                },
+                {
+                  value: "1 min",
+                  label: "From signup to public timeline",
+                  accent: "text-[hsl(25,95%,60%)]",
+                },
+              ].map(({ value, label, accent }) => (
+                <FadeUp key={label}>
+                  <div className="flex flex-col gap-2">
+                    <p className={`text-5xl font-bold ${accent}`}>{value}</p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {label}
+                    </p>
+                  </div>
+                </FadeUp>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── Who Is It For ─────────────────────────────────────────────────── */}
-        <section className="border-b border-gray-100 py-28">
+        <section className="border-b border-border py-28">
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
-              <p className="mb-14 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
                 Who it&apos;s for
               </p>
+              <h2 className="mb-16 text-3xl font-bold tracking-tight lg:text-4xl">
+                Built for developers who{" "}
+                <span className="text-primary">ship.</span>
+              </h2>
             </FadeUp>
-            <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               {[
                 {
                   icon: <Code2 className="h-5 w-5" />,
                   label: "Open source contributors",
                   body: "You ship PRs to public repos and want a single place to show what you have built.",
+                  topBorder: "border-t-primary",
+                  iconBg: "bg-primary/10 text-primary",
                   delay: 0,
                 },
                 {
                   icon: <BookOpen className="h-5 w-5" />,
                   label: "Developers documenting their work",
                   body: "No more losing track of contributions across dozens of repos. Your timeline captures all of it.",
+                  topBorder: "border-t-[hsl(152,69%,45%)]",
+                  iconBg: "bg-[hsl(152,69%,45%)]/10 text-[hsl(152,69%,45%)]",
                   delay: 0.1,
                 },
                 {
                   icon: <Users className="h-5 w-5" />,
                   label: "Community-driven builders",
-                  body: "Follow other contributors, see what they are working on, and stay connected to the projects you care about.",
+                  body: "Follow other contributors, see what they are working on, and stay connected to projects you care about.",
+                  topBorder: "border-t-[hsl(25,95%,60%)]",
+                  iconBg: "bg-[hsl(25,95%,60%)]/10 text-[hsl(25,95%,60%)]",
                   delay: 0.2,
                 },
-              ].map(({ icon, label, body, delay }) => (
+              ].map(({ icon, label, body, topBorder, iconBg, delay }) => (
                 <FadeUp key={label} delay={delay}>
-                  <div className="flex flex-col gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
+                  <div
+                    className={`flex h-full flex-col gap-5 rounded-xl border-t-2 border border-border bg-card p-6 shadow-sm ${topBorder}`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconBg}`}
+                    >
                       {icon}
                     </div>
                     <div>
-                      <p className="mb-1.5 text-base font-semibold text-gray-900">
+                      <p className="mb-2 text-base font-semibold text-foreground">
                         {label}
                       </p>
-                      <p className="text-sm leading-relaxed text-gray-500">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {body}
                       </p>
                     </div>
@@ -246,50 +398,64 @@ export default async function HomePage() {
         </section>
 
         {/* ── Features ──────────────────────────────────────────────────────── */}
-        <section className="border-b border-gray-100 py-28">
+        <section className="border-b border-border py-28">
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
-              <p className="mb-14 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
                 Features
               </p>
+              <h2 className="mb-16 text-3xl font-bold tracking-tight lg:text-4xl">
+                Everything your timeline{" "}
+                <span className="text-primary">needs.</span>
+              </h2>
             </FadeUp>
-            <div className="grid grid-cols-1 gap-px border border-gray-200 bg-gray-200 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
                 {
-                  icon: <Activity className="h-5 w-5" />,
+                  icon: <Activity className="h-6 w-6" />,
                   name: "Timeline Feed",
                   body: "Your merged PRs ordered by date, filtered by repo. See your full contribution history at a glance.",
+                  accent: "text-primary",
+                  iconBg: "bg-primary/10",
                   delay: 0,
                 },
                 {
-                  icon: <Filter className="h-5 w-5" />,
+                  icon: <Filter className="h-6 w-6" />,
                   name: "Repo Filter",
-                  body: "Choose exactly which repos appear on your public timeline. Keep it focused on the work that matters to you.",
+                  body: "Choose exactly which repos appear on your public timeline. Keep it focused on the work that matters.",
+                  accent: "text-[hsl(213,94%,58%)]",
+                  iconBg: "bg-[hsl(213,94%,58%)]/10",
                   delay: 0.1,
                 },
                 {
-                  icon: <GitPullRequest className="h-5 w-5" />,
+                  icon: <GitPullRequest className="h-6 w-6" />,
                   name: "PR Card with Stats",
-                  body: "Every PR shows its title, body summary, additions, deletions, and commit count. The full picture in one card.",
+                  body: "Every PR shows its title, body summary, additions, deletions, and commit count in one sharp card.",
+                  accent: "text-[hsl(152,69%,45%)]",
+                  iconBg: "bg-[hsl(152,69%,45%)]/10",
                   delay: 0.2,
                 },
                 {
-                  icon: <UserPlus className="h-5 w-5" />,
+                  icon: <UserPlus className="h-6 w-6" />,
                   name: "Follow System",
                   body: "Follow contributors inside the app. Your home feed shows their merged PRs as they happen, synced from GitHub.",
+                  accent: "text-[hsl(25,95%,60%)]",
+                  iconBg: "bg-[hsl(25,95%,60%)]/10",
                   delay: 0.3,
                 },
-              ].map(({ icon, name, body, delay }) => (
+              ].map(({ icon, name, body, accent, iconBg, delay }) => (
                 <FadeUp key={name} delay={delay}>
-                  <div className="flex flex-col gap-4 bg-white p-8">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
+                  <div className="group flex h-full flex-col gap-5 rounded-xl border border-border bg-card p-7 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg} ${accent}`}
+                    >
                       {icon}
                     </div>
                     <div>
-                      <p className="mb-1.5 text-base font-semibold text-gray-900">
+                      <p className="mb-2 text-base font-semibold text-foreground">
                         {name}
                       </p>
-                      <p className="text-sm leading-relaxed text-gray-500">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {body}
                       </p>
                     </div>
@@ -301,17 +467,21 @@ export default async function HomePage() {
         </section>
 
         {/* ── Screenshot Download Demo ──────────────────────────────────────── */}
-        <section className="border-b border-gray-100 bg-gray-50 py-28">
+        <section className="border-b border-border bg-muted/40 py-28">
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
-              <div className="mb-14 text-center">
-                <h2 className="font-heading mb-4 text-3xl font-bold tracking-tight text-gray-900 lg:text-4xl">
-                  Share your work in one click.
+              <div className="mb-16 text-center">
+                <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
+                  Share your work
+                </p>
+                <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl">
+                  Download as PNG.{" "}
+                  <span className="text-primary">Share anywhere.</span>
                 </h2>
-                <p className="mx-auto max-w-lg text-base leading-relaxed text-gray-500">
-                  Download your timeline or any PR card as a PNG. Built for
-                  sharing on LinkedIn, Twitter, or anywhere you want to show
-                  your work.
+                <p className="mx-auto max-w-lg text-base leading-relaxed text-muted-foreground">
+                  Export your timeline or any PR card as a beautiful PNG image.
+                  Built for sharing on LinkedIn, Twitter, or anywhere you want
+                  to show your work.
                 </p>
               </div>
             </FadeUp>
@@ -322,39 +492,60 @@ export default async function HomePage() {
         </section>
 
         {/* ── Final CTA ─────────────────────────────────────────────────────── */}
-        <section className="bg-zinc-50 py-32">
-          <div className="mx-auto max-w-6xl px-6">
+        <section className="relative overflow-hidden py-36">
+          <div
+            className="pointer-events-none absolute inset-0"
+            aria-hidden="true"
+          >
+            <div
+              className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-[120px]"
+              style={{ animation: "glow-pulse 5s ease-in-out infinite" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-[hsl(330,80%,60%)]/5" />
+          </div>
+
+          <div className="relative mx-auto max-w-6xl px-6">
             <FadeUp>
-              <div className="flex flex-col items-center gap-7 text-center">
-                <h2 className="font-heading text-3xl font-bold tracking-tight text-gray-900 lg:text-5xl">
-                  Your contributions deserve
-                  <br className="hidden sm:block" /> a better home.
+              <div className="flex flex-col items-center gap-8 text-center">
+                <p className="font-mono text-xs font-semibold uppercase tracking-widest text-primary">
+                  Get started
+                </p>
+                <h2 className="text-4xl font-bold tracking-tight lg:text-6xl">
+                  Your contributions
+                  <br />
+                  deserve a{" "}
+                  <span className="bg-gradient-to-r from-[hsl(262,83%,58%)] to-[hsl(330,80%,60%)] bg-clip-text text-transparent">
+                    better home.
+                  </span>
                 </h2>
-                <p className="max-w-md text-base leading-relaxed text-gray-500">
-                  Connect your GitHub account and your timeline is ready in
-                  under a minute.
+                <p className="max-w-md text-base leading-relaxed text-muted-foreground">
+                  Connect your GitHub account and your timeline is live in under
+                  a minute. No setup, no configuration.
                 </p>
                 <a
                   href="/login"
                   className={cn(
                     buttonVariants({ size: "lg" }),
-                    "gap-2.5 rounded-xl bg-gray-900 px-7 text-white hover:bg-gray-700",
+                    "gap-2.5 rounded-xl bg-primary px-8 py-4 text-lg text-primary-foreground shadow-2xl shadow-primary/30 hover:bg-primary/90"
                   )}
                 >
                   <GitHubIcon className="h-5 w-5" />
-                  Login with GitHub
+                  Login with GitHub — it&apos;s free
                 </a>
+                <p className="font-mono text-xs text-muted-foreground">
+                  No credit card · Public repos only · Delete anytime
+                </p>
               </div>
             </FadeUp>
           </div>
         </section>
 
         {/* ── Footer ────────────────────────────────────────────────────────── */}
-        <footer className="border-t border-gray-100 py-8">
+        <footer className="border-t border-border bg-muted/40 py-8">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
             <div className="flex flex-col gap-1">
               <LogoMark />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
                 Built for open source contributors. Hosted on Vercel.
               </p>
             </div>
@@ -362,7 +553,7 @@ export default async function HomePage() {
               href="https://github.com/faisalahammad/mypr"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-400 transition-colors hover:text-gray-700"
+              className="text-muted-foreground transition-colors hover:text-foreground"
               aria-label="GitHub repository"
             >
               <GitHubIcon className="h-5 w-5" />

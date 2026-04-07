@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,16 +18,22 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
-export default function FloatingNav() {
-  const [visible, setVisible] = useState(false);
+function useScrollPosition(threshold: number) {
+  const [past, setPast] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => {
-      setVisible(window.scrollY > window.innerHeight * 0.8);
-    };
+    const onScroll = () => setPast(window.scrollY > threshold);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [threshold]);
+
+  return past;
+}
+
+export default function FloatingNav() {
+  const visible = useScrollPosition(
+    typeof window !== "undefined" ? window.innerHeight * 0.8 : 600
+  );
 
   return (
     <AnimatePresence>
@@ -37,25 +43,25 @@ export default function FloatingNav() {
           animate={{ y: 0 }}
           exit={{ y: "-100%" }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white/90 backdrop-blur-sm"
+          className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md"
         >
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-900">
-                <span className="text-xs font-bold text-white">M</span>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+                <span className="font-mono text-xs font-bold text-primary-foreground">
+                  M
+                </span>
               </div>
-              <span className="text-sm font-semibold tracking-tight text-gray-900">
+              <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
                 mypr.pro.bd
               </span>
             </div>
 
-            {/* CTA */}
             <a
               href="/login"
               className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "gap-2 border-gray-300 text-gray-700 hover:border-gray-900 hover:text-gray-900",
+                buttonVariants({ size: "sm" }),
+                "gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
               )}
             >
               <GitHubIcon className="h-4 w-4" />
