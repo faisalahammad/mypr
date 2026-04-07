@@ -7,9 +7,9 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 
 ## Current Status
 
-**Phase:** Phase 7 — Home Feed 🚧 READY TO START
-**Last completed:** Phase 6 — Profile Page (2026-04-07)
-**Next:** Task 7.1 — Fetch followed users' PRs
+**Phase:** Phase 8 — Follow System 🚧 READY TO START
+**Last completed:** Phase 7 — Home Feed (2026-04-07)
+**Next:** Task 8.1 — Build follow/unfollow API routes
 
 ---
 
@@ -22,10 +22,37 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 - ✅ **Public Profile Page** - Server component fetching profile + PRs, dynamic route
 - ✅ **Custom 404 Page** - Branded not-found page with helpful message
 - ✅ **Avatar Component** - Installed from shadcn/ui for profile display
-- ✅ **Comprehensive Testing** - 97 tests passing (31 new tests added)
+- ✅ **Phase 7: Home Feed** - Fully implemented with pagination and loading states
+- ✅ **Feed Page** - Server component showing PRs from followed users
+- ✅ **FeedClient Component** - Client component with Load more button
+- ✅ **Loading Skeletons** - Skeleton components for feed loading state
+- ✅ **API Route** - /api/feed-prs for paginated PR fetching
+- ✅ **Supabase Functions** - getFollowedPRs() and isFollowing() helpers
+- ✅ **Comprehensive Testing** - 124 tests passing (27 new in Phase 7)
 - ✅ **Build Verification** - TypeScript compilation successful
-- ✅ **Type Assertions** - Fixed Supabase type inference issues
-- ✅ **Git Commit & Push** - Committed as b27d48b
+- ✅ **Git Commit & Push** - Committed Phase 7
+
+### Time Breakdown
+- Phase 6 task creation and planning (5 tasks created)
+- 6.1: Built PR Card component with date formatting and stats badges (10 tests)
+- 6.2: Built Timeline component with vertical line and dot markers (14 tests)
+- 6.3: Built profile page with Supabase data fetching and SEO metadata (16 tests)
+- 6.4: Built custom 404 page with branding (11 tests)
+- Fixed TypeScript build errors with Button asChild prop (not available in this shadcn version)
+- Fixed type inference issues with Supabase queries using type assertions
+- Updated test mocks to match PullRequestWithProfile type structure
+- Build verification: All 97 tests passing, TypeScript compilation successful
+- Git commit and push to origin/main (b27d48b)
+- Phase 7 task creation and planning (5 tasks created)
+- 7.1: Implemented getFollowedPRs() and isFollowing() functions in lib/supabase.ts
+- 7.2: Built feed page at app/(app)/feed/page.tsx with Timeline component
+- 7.3: Created FeedClient component with pagination and Load more button
+- 7.4: Added loading.tsx with Skeleton components from shadcn/ui
+- 7.5: Wrote comprehensive tests for all Phase 7 functionality (27 tests)
+- Installed Skeleton component from shadcn/ui
+- Fixed TypeScript type inference issues with follows queries
+- Build verification: All 124 tests passing, TypeScript compilation successful
+- Git commit and push to origin/main
 
 ### Time Breakdown
 - Phase 6 task creation and planning (5 tasks created)
@@ -349,14 +376,101 @@ All Phase 6 blockers resolved. Ready for Phase 7 implementation.
 
 ---
 
-## Next Steps (Phase 7: Home Feed)
+### Phase 7: Home Feed ✅
+
+- ✅ **7.1 — Fetch followed users' PRs**
+  - Created `getFollowedPRs()` function in `lib/supabase.ts`
+  - Joins follows table with pull_requests and profiles
+  - Ordered by merged_at DESC with pagination support (limit, offset)
+  - Returns `PullRequestWithProfile[]` with profile data included
+  - Created `isFollowing()` helper function for follow status checking
+  - Type assertions added for Supabase query results
+
+- ✅ **7.2 — Build the feed page**
+  - Created `app/(app)/feed/page.tsx` - Server component for home feed
+  - Fetches PRs from followed users using `getFollowedPRs()`
+  - Renders FeedClient component with initial PRs and hasMore state
+  - Protected route - requires authentication (redirects to /login)
+  - Page header with "Your Feed" title and description
+  - Empty state message when not following anyone
+
+- ✅ **7.3 — Add pagination to the feed**
+  - Created `app/api/feed-prs/route.ts` - API endpoint for paginated PR fetching
+  - Supports limit (max 50) and offset query parameters
+  - Returns `prs`, `hasMore`, and `total` count
+  - Authentication required - returns 401 for unauthenticated requests
+  - Created `components/feed/FeedClient.tsx` - Client component with pagination
+  - "Load more" button that fetches and appends PRs without page reload
+  - Loading state with spinner while fetching
+  - Error handling with retry button
+  - Button disabled while loading and hidden when no more PRs
+
+- ✅ **7.4 — Add loading skeletons**
+  - Installed Skeleton component from shadcn/ui (`npx shadcn@latest add skeleton`)
+  - Created `app/(app)/feed/loading.tsx` - Loading page for feed
+  - Shows 5 PR card skeletons with vertical line and dot markers
+  - Page header skeletons (title and description)
+  - Matches the exact layout of the actual feed page
+
+- ✅ **Testing Infrastructure**
+  - Added feed-schema.test.ts (10 tests) for API response schema validation
+  - Added feed-client.test.tsx (11 tests) for FeedClient component and pagination
+  - Added feed-loading.test.tsx (6 tests) for loading page structure
+  - Added @testing-library/user-event dependency for user interaction tests
+  - Updated jest.setup.js with Request, Response, and Headers mocks for API route tests
+  - Total: 124 tests passing (27 new tests added)
+  - Build verified and passing
+
+---
+
+## Files Created/Modified (Phase 7)
+
+### New Files:
+- `src/app/(app)/feed/page.tsx` - Home feed page (server component)
+- `src/app/(app)/feed/loading.tsx` - Loading skeleton page
+- `src/app/api/feed-prs/route.ts` - API endpoint for paginated PR fetching
+- `src/components/feed/FeedClient.tsx` - Client component with pagination
+- `src/components/ui/skeleton.tsx` - Skeleton component from shadcn/ui
+- `tests/api/feed-schema.test.ts` - API response schema validation
+- `tests/component/feed-client.test.tsx` - FeedClient component tests
+- `tests/component/feed-loading.test.tsx` - Loading page tests
+
+### Modified Files:
+- `src/lib/supabase.ts` - Added `getFollowedPRs()` and `isFollowing()` functions
+- `package.json` - Added @testing-library/user-event dependency
+- `package-lock.json` - Updated with new dependency
+- `jest.setup.js` - Added Request, Response, and Headers mocks
+
+---
+
+## Test Results (Phase 7)
+
+**New Tests:** ✅ 27 passing
+- Feed API schema validation (10 tests)
+- FeedClient component and pagination (11 tests)
+- Feed loading page structure (6 tests)
+
+**Existing Tests:** ✅ 97 passing
+- All Phase 1-6 tests continue to pass
+
+**Total:** ✅ 124 passing
+
+**Build Status:** ✅ PASSING
+- TypeScript compilation successful
+- All routes generated correctly
+- 11 routes (5 dynamic, 4 static, 3 API)
+- New routes: `/feed`, `/api/feed-prs`, `/feed/loading`
+
+---
+
+## Next Steps (Phase 8: Follow System)
 
 **Ready to implement:**
 
-1. **Task 7.1** — Fetch followed users' PRs
-2. **Task 7.2** — Build the feed page
-3. **Task 7.3** — Add pagination to the feed
-4. **Task 7.4** — Add loading skeletons
+1. **Task 8.1** — Build follow/unfollow API routes
+2. **Task 8.2** — Build the follow button component
+3. **Task 8.3** — Add follow button to profile page
+4. **Task 8.4** — Sync GitHub follows on first login
 
 ---
 
