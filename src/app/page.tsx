@@ -14,7 +14,9 @@ import {
   Terminal,
   UserPlus,
   Users,
+  Zap,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import FloatingNav from "@/components/home/FloatingNav";
 import AnimatedTimeline from "@/components/home/AnimatedTimeline";
 import { FadeUp } from "@/components/home/FadeUp";
@@ -234,8 +236,7 @@ export default async function HomePage() {
 
               {/* Subtitle */}
               <p className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground">
-                Every merged PR you have ever shipped, in one place. Documented,
-                shareable, and connected to the open source community.
+                Every merged PR you have ever shipped, in one place. Documented, shareable, and connected to the open source community.
               </p>
 
               {/* Terminal block — exact from source */}
@@ -336,13 +337,16 @@ export default async function HomePage() {
         <section className="border-b border-border py-28">
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
-              <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
-                Who it&apos;s for
-              </p>
-              <h2 className="mb-16 text-3xl font-bold tracking-tight lg:text-4xl">
-                Built for developers who{" "}
-                <span className="text-primary">ship.</span>
-              </h2>
+              <div className="mb-16 text-center">
+                <Badge className="gradient-bg text-primary-foreground border-0 font-mono text-xs px-3 py-1 mb-5 inline-flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  WHO IS IT FOR
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight lg:text-4xl">
+                  Built for developers who{" "}
+                  <span className="gradient-text">ship.</span>
+                </h2>
+              </div>
             </FadeUp>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               {[
@@ -399,13 +403,16 @@ export default async function HomePage() {
         <section className="border-b border-border py-28">
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
-              <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
-                Features
-              </p>
-              <h2 className="mb-16 text-3xl font-bold tracking-tight lg:text-4xl">
-                Everything your timeline{" "}
-                <span className="text-primary">needs.</span>
-              </h2>
+              <div className="mb-16 text-center">
+                <Badge className="gradient-bg text-primary-foreground border-0 font-mono text-xs px-3 py-1 mb-5 inline-flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  FEATURES
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight lg:text-4xl">
+                  Everything your timeline{" "}
+                  <span className="gradient-text">needs.</span>
+                </h2>
+              </div>
             </FadeUp>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
@@ -469,9 +476,10 @@ export default async function HomePage() {
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
               <div className="mb-16 text-center">
-                <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
-                  Share your work
-                </p>
+                <Badge className="gradient-bg text-primary-foreground border-0 font-mono text-xs px-3 py-1 mb-5 inline-flex items-center gap-1">
+                  <Download className="h-3 w-3" />
+                  SHARE
+                </Badge>
                 <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl">
                   Download as PNG.{" "}
                   <span className="text-primary">Share anywhere.</span>
@@ -505,9 +513,10 @@ export default async function HomePage() {
           <div className="relative mx-auto max-w-6xl px-6">
             <FadeUp>
               <div className="flex flex-col items-center gap-8 text-center">
-                <p className="font-mono text-xs font-semibold uppercase tracking-widest text-primary">
-                  Get started
-                </p>
+                <Badge className="gradient-bg text-primary-foreground border-0 font-mono text-xs px-3 py-1 inline-flex items-center gap-1">
+                  <GitPullRequestArrow className="h-3 w-3" />
+                  GET STARTED
+                </Badge>
                 <h2 className="text-4xl font-bold tracking-tight lg:text-6xl">
                   Your contributions
                   <br />
