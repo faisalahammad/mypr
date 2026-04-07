@@ -263,3 +263,115 @@ export const isAuthenticated = async () => {
   const user = await getUser()
   return !!user
 }
+
+// ============================================================================
+// FOLLOWER/FOLLOWING QUERIES
+// ============================================================================
+
+/**
+ * Get pull requests from users that the current user follows
+ *
+ * @param userId - The current user's ID
+ * @param limit - Maximum number of PRs to return (default: 20)
+ * @param offset - Number of PRs to skip for pagination (default: 0)
+ * @returns Array of PRs with profile information from followed users
+ */
+export const getFollowedPRs = async (
+  userId: string,
+  limit = 20,
+  offset = 0
+) => {
+  const supabase = await createSupabaseServerClient()
+
+  // First, get the list of users that the current user follows
+  const { data: follows, error: followsError } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId)
+
+  if (followsError) {
+    console.error('Error fetching follows:', followsError)
+    return []
+  }
+
+  // If not following anyone, return empty array
+  if (!follows || follows.length === 0) {
+    return []
+  }
+
+  // Get the IDs of followed users
+  const followingIds = follows.map((f: any) => f.following_id)
+
+  // Fetch PRs from followed users with their profile information
+  const { data: prs, error: prsError } = await supabase
+    .from('pull_requests')
+    .select(`
+      id,
+      user_id,
+      repo_full_name,
+      pr_number,
+      title,
+      body_summary,
+      pr_url,
+      merged_at,
+      additions,
+      deletions,
+      commits_count,
+      synced_at,
+      profiles (
+        github_username,
+        github_avatar_url,
+        display_name
+      )
+    `)
+    .in('user_id', followingIds)
+    .order('merged_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (prsError) {
+    console.error('Error fetching followed PRs:', prsError)
+    return []
+  }
+
+  // Transform the data to match PullRequestWithProfile type
+  return prs.map((pr: any) => ({
+    id: pr.id,
+    user_id: pr.user_id,
+    repo_full_name: pr.repo_full_name,
+    pr_number: pr.pr_number,
+    title: pr.title,
+    body_summary: pr.body_summary,
+    pr_url: pr.pr_url,
+    merged_at: pr.merged_at,
+    additions: pr.additions,
+    deletions: pr.deletions,
+    commits_count: pr.commits_count,
+    synced_at: pr.synced_at,
+    profile: pr.profiles || null,
+  }))
+}
+
+/**
+ * Check if the current user is following a specific user
+ *
+ * @param currentUserId - The current user's ID
+ * @param targetUserId - The user ID to check if following
+ * @returns Boolean indicating if following
+ */
+export const isFollowing = async (currentUserId: string, targetUserId: string) => {
+  const supabase = await createSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .from('follows')
+    .select('*')
+    .eq('follower_id', currentUserId)
+    .eq('following_id', targetUserId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error checking follow status:', error)
+    return false
+  }
+
+  return !!data
+}
