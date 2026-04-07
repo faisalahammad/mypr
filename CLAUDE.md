@@ -128,3 +128,4 @@ NEXT_PUBLIC_APP_URL=https://mypr.pro.bd
 - Do not skip session validation in API routes. Every route must check auth first.
 - Do not fetch all PRs on every page load. Use the cached `pull_requests` table; trigger sync explicitly.
 - Do not make the `github_access_token` column readable by clients. It must never be exposed via the anon key.
+- No AI footprint in Git Commit.

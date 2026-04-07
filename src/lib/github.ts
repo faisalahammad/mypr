@@ -17,7 +17,9 @@ export interface GitHubRepo {
   description: string | null
   language: string | null
   stargazers_count: number
+  visibility: string
   updated_at: string
+  is_active?: boolean
 }
 
 export interface GitHubPRListItem {
