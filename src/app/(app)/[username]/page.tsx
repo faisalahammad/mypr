@@ -12,6 +12,9 @@ interface ProfilePageProps {
   }
 }
 
+// Force dynamic rendering - don't statically generate during build
+export const dynamic = 'force-dynamic'
+
 /**
  * Public profile page for a user
  * Displays their avatar, name, GitHub link, and PR timeline

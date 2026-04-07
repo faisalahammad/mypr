@@ -174,6 +174,9 @@ function MarqueeStrip() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// Force dynamic rendering - don't statically generate during build
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage({ searchParams }: { searchParams: { code?: string } }) {
   // DEBUG: Handle OAuth callback if code is present
   if (searchParams.code) {

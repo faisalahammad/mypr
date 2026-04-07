@@ -3,6 +3,9 @@ import { FeedClient } from '@/components/feed/FeedClient'
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
+// Force dynamic rendering - don't statically generate during build
+export const dynamic = 'force-dynamic'
+
 /**
  * Home Feed Page - Protected route showing PRs from followed users
  *
