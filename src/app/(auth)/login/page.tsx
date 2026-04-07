@@ -1,17 +1,35 @@
 'use client'
 
-import { createSupabaseClient } from '@/lib/supabase-client'
+import { createClient } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 
 export default function LoginPage() {
   const handleLogin = async () => {
-    const supabase = createSupabaseClient()
-    await supabase.auth.signInWithOAuth({
+    // Use the regular createClient for OAuth (better redirect handling)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
+    console.log('OAuth redirectTo:', redirectTo)
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
+        redirectTo
       }
     })
+
+    if (error) {
+      console.error('OAuth error:', error)
+      return
+    }
+
+    // Manually redirect to ensure the flow works
+    if (data?.url) {
+      window.location.href = data.url
+    }
   }
 
   return (

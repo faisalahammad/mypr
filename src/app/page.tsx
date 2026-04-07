@@ -174,7 +174,14 @@ function MarqueeStrip() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: { code?: string } }) {
+  // DEBUG: Handle OAuth callback if code is present
+  if (searchParams.code) {
+    console.log('DEBUG: Received code on homepage:', searchParams.code);
+    // Redirect to the proper callback handler
+    return redirect(`/api/auth/callback?code=${searchParams.code}`);
+  }
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
