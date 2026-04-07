@@ -85,37 +85,37 @@ Update MEMORY.md at the end of each session to reflect progress.
 
 ---
 
-## Phase 5: Repo Settings Page
+## Phase 5: Repo Settings Page ✅ COMPLETE
 
-- [ ] **5.1 — List user's GitHub repos**
+- [x] **5.1 — List user's GitHub repos**
   On the settings page (server component), fetch the user's public GitHub repos via Octokit. Show repo name, visibility, and star count.
   _Files: `app/(app)/settings/page.tsx`, `lib/github.ts`_
 
-- [ ] **5.2 — Toggle repo active/inactive**
+- [x] **5.2 — Toggle repo active/inactive**
   Add a toggle switch next to each repo. On toggle, upsert a row in the `repositories` table with `is_active` set accordingly. Use a server action or client-side API call.
   _Files: `app/(app)/settings/page.tsx`, `app/api/repos/route.ts`_
 
-- [ ] **5.3 — Show active repo count and sync status**
+- [x] **5.3 — Show active repo count and sync status**
   Display how many repos are currently active and when PRs were last synced (from `synced_at` on `pull_requests`). Add visual feedback for save state.
   _Files: `app/(app)/settings/page.tsx`_
 
 ---
 
-## Phase 6: Profile Page
+## Phase 6: Profile Page ✅
 
-- [ ] **6.1 — Build the PR card component**
+- [x] **6.1 — Build the PR card component**
   Create `components/pr-card/PRCard.tsx`. Display: PR title, repo name, merged date, additions/deletions badge, commits count, link to GitHub PR. Use shadcn/ui Card and Badge.
   _Files: `components/pr-card/PRCard.tsx`, `types/index.ts`_
 
-- [ ] **6.2 — Build the timeline feed component**
+- [x] **6.2 — Build the timeline feed component**
   Create `components/timeline/Timeline.tsx` that accepts an array of PRs and renders them in reverse-chronological order with a vertical line connector.
   _Files: `components/timeline/Timeline.tsx`_
 
-- [ ] **6.3 — Build the public profile page**
+- [x] **6.3 — Build the public profile page**
   Create `app/(app)/[username]/page.tsx` as a server component. Fetch the user's profile and active PRs from Supabase. Render avatar, display name, GitHub link, and the Timeline component.
   _Files: `app/(app)/[username]/page.tsx`_
 
-- [ ] **6.4 — Handle 404 for unknown usernames**
+- [x] **6.4 — Handle 404 for unknown usernames**
   If the username does not exist in `profiles`, return a 404 page using Next.js `notFound()`.
   _Files: `app/(app)/[username]/page.tsx`_
 
