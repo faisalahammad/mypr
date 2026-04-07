@@ -104,6 +104,25 @@
   background: linear-gradient(135deg, #7c3bed, #eb4799);
 }
 
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #7c3bed, #eb4799, #2bd4bd);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 .gradient-bg-subtle {
   background: linear-gradient(135deg, #7c3bed0f, #eb47990f, #2bd4bd0a);
 }

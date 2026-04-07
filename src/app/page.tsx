@@ -9,7 +9,6 @@ import {
   Download,
   Filter,
   GitPullRequestArrow,
-  Lock,
   Sparkles,
   Terminal,
   UserPlus,
@@ -59,96 +58,81 @@ const MOCK_BROWSER_PRS = [
     title: "Fix taxonomy query when meta_query is empty",
     additions: 84,
     deletions: 12,
+    commits: 4,
+    color: "hsl(213 94% 58%)",
   },
   {
     repo: "vercel/next.js",
-    title: "Add custom headers in middleware response",
-    additions: 142,
-    deletions: 31,
+    title: "Improve error boundary fallback for async server components",
+    additions: 210,
+    deletions: 45,
+    commits: 6,
+    color: "hsl(262 83% 58%)",
   },
   {
-    repo: "roots/sage",
-    title: "Refactor asset pipeline to Vite 5.x format",
-    additions: 203,
-    deletions: 87,
+    repo: "pods-framework/pods",
+    title: "Add support for repeatable field groups in REST API",
+    additions: 133,
+    deletions: 22,
+    commits: 3,
+    color: "hsl(152 69% 45%)",
   },
 ];
 
 function BrowserMockup() {
   return (
-    <div className="relative mx-auto max-w-2xl">
-      <div className="absolute -inset-4 rounded-2xl bg-primary/10 blur-2xl" />
-
-      <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/5">
-        {/* Chrome bar */}
-        <div className="flex items-center gap-3 border-b border-border bg-muted px-4 py-3">
-          <div className="flex gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
-            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(45,90%,55%)]/70" />
-            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(152,69%,45%)]/70" />
-          </div>
-          <div className="flex flex-1 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 font-mono text-xs text-muted-foreground">
-            <Lock className="h-3 w-3 shrink-0" />
-            <span>mypr.pro.bd/@username</span>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="bg-background p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="font-mono text-sm font-semibold text-foreground">
-                @username
-              </p>
-              <p className="font-mono text-xs text-muted-foreground">
-                12 merged PRs across 5 repos
-              </p>
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold text-primary-foreground">
-              US
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
-            {MOCK_BROWSER_PRS.map((pr) => (
-              <div
-                key={pr.repo}
-                className="rounded-lg border border-border bg-card px-3 py-2.5"
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {pr.repo}
-                  </span>
-                  <span className="flex items-center gap-1 font-mono text-xs font-medium text-[hsl(152,69%,45%)]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152,69%,45%)]" />
-                    Merged
-                  </span>
-                </div>
-                <p className="truncate text-sm font-medium text-foreground">
-                  {pr.title}
-                </p>
-                <div className="mt-1 font-mono text-xs text-muted-foreground">
-                  <span className="font-semibold text-[hsl(152,69%,45%)]">
-                    +{pr.additions}
-                  </span>{" "}
-                  <span className="font-semibold text-destructive">
-                    −{pr.deletions}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="fade-up-element mt-12 mx-auto max-w-2xl rounded-2xl gradient-border bg-card shadow-xl overflow-hidden">
+      {/* Chrome bar */}
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3 bg-secondary/60">
+        <span className="h-3 w-3 rounded-full bg-[hsl(0,84%,60%,0.6)]" />
+        <span className="h-3 w-3 rounded-full bg-[hsl(45,90%,55%,0.6)]" />
+        <span className="h-3 w-3 rounded-full bg-[hsl(152,69%,45%,0.6)]" />
+        <div className="ml-4 flex-1 rounded-md bg-secondary/80 px-3 py-1">
+          <span className="font-mono text-[11px] text-muted-foreground">
+            mypr.pro.bd/faisalahammad
+          </span>
         </div>
       </div>
 
-      {/* Pulsing download button */}
-      <div className="absolute bottom-4 right-4">
-        <div className="relative">
-          <span className="absolute -inset-1 animate-ping rounded-lg bg-primary opacity-20" />
-          <div className="relative flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-mono text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30">
-            <Download className="h-3.5 w-3.5" />
-            Download PNG
+      {/* PR cards */}
+      <div className="p-5 space-y-3">
+        {MOCK_BROWSER_PRS.map((pr) => (
+          <div
+            key={pr.repo}
+            className="rounded-xl border border-border p-4 text-left glow-card relative overflow-hidden"
+          >
+            <div
+              className="absolute top-0 left-0 w-1 h-full rounded-l-xl"
+              style={{ background: pr.color }}
+            />
+            <div className="pl-3">
+              <p className="font-mono text-[11px] text-muted-foreground">
+                {pr.repo}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {pr.title}
+              </p>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="font-mono text-xs text-[hsl(152,69%,45%)]">
+                  +{pr.additions}
+                </span>
+                <span className="font-mono text-xs text-destructive">
+                  −{pr.deletions}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  · {pr.commits} commits
+                </span>
+              </div>
+            </div>
           </div>
+        ))}
+      </div>
+
+      {/* Download button inside mockup */}
+      <div className="px-6 pb-5 flex justify-center">
+        <div className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg gradient-bg text-primary-foreground border-0 animate-gentle-pulse`}>
+          <Download className="h-4 w-4" />
+          Download PNG
         </div>
       </div>
     </div>
@@ -472,28 +456,29 @@ export default async function HomePage() {
         </section>
 
         {/* ── Screenshot Download Demo ──────────────────────────────────────── */}
-        <section className="border-b border-border bg-muted/40 py-28">
-          <div className="mx-auto max-w-6xl px-6">
+        <section className="py-28 bg-secondary/80 relative overflow-hidden">
+          {/* Decorative blobs */}
+          <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+            <div className="absolute top-20 right-10 w-60 h-60 rounded-full bg-[hsl(262,83%,58%,0.05)] blur-3xl" />
+            <div className="absolute bottom-10 left-10 w-48 h-48 rounded-full bg-[hsl(330,80%,60%,0.05)] blur-3xl" />
+          </div>
+
+          <div className="relative mx-auto max-w-4xl px-6 text-center">
             <FadeUp>
-              <div className="mb-16 text-center">
-                <Badge className="gradient-bg text-primary-foreground border-0 font-mono text-xs px-3 py-1 mb-5 inline-flex items-center gap-1">
-                  <Download className="h-3 w-3" />
-                  SHARE
-                </Badge>
-                <h2 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl">
-                  Download as PNG.{" "}
-                  <span className="text-primary">Share anywhere.</span>
-                </h2>
-                <p className="mx-auto max-w-lg text-base leading-relaxed text-muted-foreground">
-                  Export your timeline or any PR card as a beautiful PNG image.
-                  Built for sharing on LinkedIn, Twitter, or anywhere you want
-                  to show your work.
-                </p>
-              </div>
+              <Badge className="gradient-bg text-primary-foreground border-0 font-mono text-xs px-3 py-1 inline-flex items-center gap-1">
+                <Download className="h-3 w-3 mr-1" />
+                SHARE
+              </Badge>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mt-5">
+                Share your work{" "}
+                <span className="gradient-text">in one click</span>
+              </h2>
+              <p className="mt-4 text-muted-foreground max-w-md mx-auto">
+                Download your PR timeline as a beautiful image and share it on
+                LinkedIn, Twitter, or anywhere.
+              </p>
             </FadeUp>
-            <FadeUp delay={0.1}>
-              <BrowserMockup />
-            </FadeUp>
+            <BrowserMockup />
           </div>
         </section>
 
