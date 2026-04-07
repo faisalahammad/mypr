@@ -89,7 +89,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         {/* Profile Header */}
         <Card className="mb-8">
           <CardContent className="pt-6">
-            <div className="flex items-start gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
               {/* Avatar */}
               <Avatar className="h-20 w-20">
                 <AvatarImage src={typedProfile.github_avatar_url || undefined} />

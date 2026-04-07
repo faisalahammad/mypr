@@ -306,7 +306,7 @@ export default async function HomePage() {
               ].map(({ value, label, accent }) => (
                 <FadeUp key={label}>
                   <div className="flex flex-col gap-2">
-                    <p className={`text-5xl font-bold ${accent}`}>{value}</p>
+                    <p className={`text-4xl sm:text-5xl font-bold ${accent}`}>{value}</p>
                     <p className="text-sm leading-relaxed text-muted-foreground">
                       {label}
                     </p>
@@ -524,7 +524,8 @@ export default async function HomePage() {
                   )}
                 >
                   <GitHubIcon className="h-5 w-5" />
-                  Login with GitHub — it&apos;s free
+                  Login with GitHub
+                  <span aria-hidden="true" className="ml-0.5">→</span>
                 </a>
                 <p className="font-mono text-xs text-muted-foreground">
                   No credit card · Public repos only · Delete anytime
