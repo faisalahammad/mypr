@@ -123,19 +123,19 @@ Update MEMORY.md at the end of each session to reflect progress.
 
 ## Phase 7: Home Feed
 
-- [ ] **7.1 — Fetch followed users' PRs**
+- [x] **7.1 — Fetch followed users' PRs**
   Write a Supabase query that fetches merged PRs from all users the current user follows (via the `follows` table), ordered by `merged_at` desc, with a limit for pagination.
   _Files: `lib/supabase.ts`, `app/(app)/feed/page.tsx`_
 
-- [ ] **7.2 — Build the feed page**
+- [x] **7.2 — Build the feed page**
   Render the home feed as a server component using the Timeline component. Show a "no follows yet" empty state if the follow list is empty.
   _Files: `app/(app)/feed/page.tsx`_
 
-- [ ] **7.3 — Add pagination to the feed**
+- [x] **7.3 — Add pagination to the feed**
   Implement cursor-based or offset pagination. Add a "Load more" button (client component) that appends more PRs to the list without a full page reload.
   _Files: `app/(app)/feed/page.tsx`, `components/timeline/Timeline.tsx`_
 
-- [ ] **7.4 — Add loading skeletons**
+- [x] **7.4 — Add loading skeletons**
   Add Skeleton components from shadcn/ui for the feed while data is loading.
   _Files: `app/(app)/feed/loading.tsx`_
 
@@ -143,19 +143,19 @@ Update MEMORY.md at the end of each session to reflect progress.
 
 ## Phase 8: Follow System
 
-- [ ] **8.1 — Build follow/unfollow API routes**
+- [x] **8.1 — Build follow/unfollow API routes**
   Create `POST /api/follow` and `DELETE /api/follow`. Both validate session. Insert or delete a row in the `follows` table. Return updated follow state.
   _Files: `app/api/follow/route.ts`_
 
-- [ ] **8.2 — Build the follow button component**
+- [x] **8.2 — Build the follow button component**
   Create `components/FollowButton.tsx` (client component). Shows "Follow" or "Unfollow" based on current state. Calls the API routes. Optimistic UI update.
   _Files: `components/FollowButton.tsx`_
 
-- [ ] **8.3 — Add follow button to profile page**
+- [x] **8.3 — Add follow button to profile page**
   Render the FollowButton on the public profile page when the viewer is logged in and is not viewing their own profile.
   _Files: `app/(app)/[username]/page.tsx`_
 
-- [ ] **8.4 — Sync GitHub follows on first login**
+- [x] **8.4 — Sync GitHub follows on first login**
   After OAuth callback, fetch the authenticated user's GitHub following list and bulk-insert matching `profiles` into the `follows` table. Skip any GitHub usernames that don't have a profile yet.
   _Files: `app/api/auth/callback/route.ts`, `lib/github.ts`_
 
@@ -163,15 +163,15 @@ Update MEMORY.md at the end of each session to reflect progress.
 
 ## Phase 9: Screenshot Download
 
-- [ ] **9.1 — Install and configure html2canvas**
+- [x] **9.1 — Install and configure html2canvas**
   Install `html2canvas`. Create a utility function in `lib/utils.ts` that takes a DOM ref and downloads it as a PNG with a consistent filename.
   _Files: `lib/utils.ts`, `package.json`_
 
-- [ ] **9.2 — Add download button to PR card**
+- [x] **9.2 — Add download button to PR card**
   Add a "Download" icon button to `PRCard.tsx` that captures only that card as a PNG using the html2canvas utility.
   _Files: `components/pr-card/PRCard.tsx`_
 
-- [ ] **9.3 — Add download button to full timeline**
+- [x] **9.3 — Add download button to full timeline**
   Add a "Download timeline" button on the profile page that captures the entire timeline section as a PNG.
   _Files: `app/(app)/[username]/page.tsx`, `components/timeline/Timeline.tsx`_
 

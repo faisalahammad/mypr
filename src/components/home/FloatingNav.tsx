@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GitPullRequest } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { GitHubLoginButton } from "@/components/auth/GitHubLoginButton";
 import { cn } from "@/lib/utils";
 
 function GitHubIcon({ className }: { className?: string }) {
@@ -47,8 +48,7 @@ export default function FloatingNav() {
         </div>
 
         {/* CTA — gradient-bg, exact from source */}
-        <a
-          href="/login"
+        <GitHubLoginButton
           className={cn(
             buttonVariants({ size: "sm" }),
             "gap-2 gradient-bg text-primary-foreground border-0 hover:opacity-90 rounded-lg"
@@ -56,7 +56,7 @@ export default function FloatingNav() {
         >
           <GitHubIcon className="h-4 w-4" />
           Login with GitHub
-        </a>
+        </GitHubLoginButton>
       </div>
     </nav>
   );

@@ -8,8 +8,22 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 ## Current Status
 
 **Phase:** Phase 10 — Polish and Deploy 🚧 READY TO START
-**Last completed:** Phase 9 — Screenshot Download (2026-04-07)
+**Last completed:** Repository settings UI alignment and direct GitHub login (2026-04-08)
 **Next:** Task 10.1 — Add page metadata and OG images
+
+---
+
+## Session Summary (2026-04-08)
+
+### Completed This Session
+- ✅ Replaced the old Phase 5 placeholder in settings with the real repository management UI backed by `/api/repos`
+- ✅ Added optimistic repository toggles, active repo counts, repo loading/error states, and sync gating when no repos are active
+- ✅ Extracted shared GitHub OAuth start logic into a reusable login button and used it on the home page, floating nav, and `/login`
+- ✅ Reconciled phase tracking docs so `TASKS.md` now matches the implemented Phases 7–9
+
+### Verification
+- Settings page tests updated for repo rendering, optimistic toggle, rollback, and sync gating
+- Shared GitHub login button tests added for OAuth start contract and safe `next` preservation
 
 ---
 
@@ -113,7 +127,7 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 ### Phase 5: Repository Settings ✅
 - `GET /api/repos` — fetches GitHub repos merged with DB active status
 - `POST /api/repos` — toggles `is_active` in `repositories` table
-- Settings page: repo list with Switch toggle, active count badge, sync status
+- Settings page: repo list with Switch toggle, active count badge, sync status, loading/error states, and sync gating when no repos are active
 
 ### Phase 6: Profile Page ✅
 - `src/components/pr-card/PRCard.tsx` — stats, relative date formatting, GitHub link
@@ -165,15 +179,14 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 | 7     | +27   | 124        |
 | 8     | +18   | **142**    |
 
-**Known pre-existing failure:** `tests/component/settings.test.tsx` — 6 tests fail due to an existing mock issue unrelated to Phase 6–8 work. Not introduced this session.
-
 **Build:** ✅ TypeScript clean, 12 routes
 
 ---
 
 ## Notes
 
-- `settings.test.tsx` has 6 pre-existing failures — investigate separately, not related to recent work
+- `TASKS.md` and `MEMORY.md` had drifted: Phases 7–9 were implemented in code but still unchecked in `TASKS.md`
+- Phase 5 was only partially complete before this session: the APIs existed, but the settings page still rendered placeholder copy instead of the repo selector
 - RLS policies confirmed working; `github_access_token` never exposed to anon key
 - All protected routes (feed, settings) validated by middleware
 - Follow sync runs on every login — safe due to upsert with `onConflict`
@@ -188,4 +201,4 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 - `src/app/(app)/[username]/page.tsx` — replaced `Timeline` with `DownloadableTimeline`
 - Tests: `tests/unit/download-utils.test.ts` (6), `tests/component/downloadable-timeline.test.tsx` (11), 2 additions to `pr-card.test.tsx`
 
-**Last updated:** 2026-04-07 (Phase 9 complete, 155 tests passing, build clean, ready for Phase 10)
+**Last updated:** 2026-04-08 (settings UI aligned with Phase 5, direct GitHub login enabled from home/nav, docs reconciled)

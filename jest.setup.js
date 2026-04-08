@@ -81,3 +81,5 @@ global.Headers = class MockHeaders {
     return this.entries()
   }
 }
+
+global.PointerEvent = MouseEvent

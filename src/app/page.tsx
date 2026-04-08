@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { buildAuthCallbackPath } from "@/lib/auth-redirect";
+import { GitHubLoginButton } from "@/components/auth/GitHubLoginButton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -255,8 +256,7 @@ export default async function HomePage({
 
               {/* CTA — gradient-bg button exact from source */}
               <div className="mt-8 flex items-center gap-4">
-                <a
-                  href="/login"
+                <GitHubLoginButton
                   className={cn(
                     buttonVariants({ size: "lg" }),
                     "gap-2 gradient-bg text-primary-foreground border-0 hover:opacity-90 rounded-xl px-7 shadow-lg shadow-[hsl(262,83%,58%,0.25)]"
@@ -265,7 +265,7 @@ export default async function HomePage({
                   <GitPullRequestArrow className="h-5 w-5" />
                   Get Started Free
                   <span aria-hidden="true" className="ml-0.5">→</span>
-                </a>
+                </GitHubLoginButton>
                 <span className="text-xs text-muted-foreground font-mono">
                   No setup required
                 </span>
@@ -531,8 +531,7 @@ export default async function HomePage({
                   Connect your GitHub account and your timeline is live in under
                   a minute. No setup, no configuration.
                 </p>
-                <a
-                  href="/login"
+                <GitHubLoginButton
                   className={cn(
                     buttonVariants({ size: "lg" }),
                     "gap-2.5 rounded-xl bg-primary px-8 py-4 text-lg text-primary-foreground shadow-2xl shadow-primary/30 hover:bg-primary/90"
@@ -541,7 +540,7 @@ export default async function HomePage({
                   <GitHubIcon className="h-5 w-5" />
                   Login with GitHub
                   <span aria-hidden="true" className="ml-0.5">→</span>
-                </a>
+                </GitHubLoginButton>
                 <p className="font-mono text-xs text-muted-foreground">
                   No credit card · Public repos only · Delete anytime
                 </p>
