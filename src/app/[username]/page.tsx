@@ -50,7 +50,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const supabase = await createSupabaseServerClient()
   const { data: activeRepos } = await supabase
     .from('repositories')
-    .select('user_id, repo_full_name')
+    .select('user_id, repo_full_name, owner_avatar_url')
     .eq('user_id', typedProfile.id)
     .eq('is_active', true)
 
@@ -59,6 +59,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .select('*')
     .eq('user_id', typedProfile.id)
     .order('merged_at', { ascending: false })
+
+  const activeRepoList = (activeRepos ?? []) as Array<{
+    user_id: string
+    repo_full_name: string
+    owner_avatar_url: string | null
+  }>
+
+  const repoAvatarLookup = new Map<string, string | null>(
+    activeRepoList.map((r) => [r.repo_full_name, r.owner_avatar_url])
+  )
 
   const typedPRs = filterPRsByActiveRepos(
     ((prs || []) as Array<{
@@ -75,7 +85,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       commits_count: number
       synced_at: string
     }>),
-    buildActiveRepoLookup((activeRepos ?? []) as Array<{ user_id: string; repo_full_name: string }>)
+    buildActiveRepoLookup(activeRepoList.map(({ user_id, repo_full_name }) => ({ user_id, repo_full_name })))
   )
 
   const prsWithProfile: PullRequestWithProfile[] = typedPRs.map((pr) => ({
@@ -85,9 +95,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       github_avatar_url: typedProfile.github_avatar_url,
       display_name: typedProfile.display_name,
     },
+    repo_owner_avatar_url: repoAvatarLookup.get(pr.repo_full_name) ?? null,
   }))
 
   const displayName = typedProfile.display_name || typedProfile.github_username
+  const contributedRepos = activeRepoList.length
   const currentUser = await getUser()
   const currentUserProfile = await getUserProfile() as { github_username: string; github_avatar_url: string | null } | null
   const isOwnProfile = currentUser?.id === typedProfile.id
@@ -120,16 +132,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                     <p className="text-muted-foreground">@{typedProfile.github_username}</p>
                   </div>
 
-                  <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
                     <div className="rounded-2xl border border-border bg-background/80 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em]">Merged PRs</p>
-                      <p className="mt-2 text-2xl font-semibold text-foreground">{prsWithProfile.length}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Contributed repos</p>
+                      <p className="mt-2 text-2xl font-semibold text-foreground">{contributedRepos}</p>
                     </div>
                     <div className="rounded-2xl border border-border bg-background/80 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em]">Profile status</p>
-                      <p className="mt-2 font-medium text-foreground">
-                        {isOwnProfile ? 'Your public portfolio' : 'Public contributor profile'}
-                      </p>
+                      <p className="text-xs font-medium text-muted-foreground">Merged PRs</p>
+                      <p className="mt-2 text-2xl font-semibold text-foreground">{prsWithProfile.length}</p>
                     </div>
                   </div>
 
