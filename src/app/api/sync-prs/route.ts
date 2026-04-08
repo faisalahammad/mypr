@@ -78,7 +78,16 @@ export async function POST(request: NextRequest) {
     for (const repoData of reposWithPRs) {
       const { repo_full_name, description, owner_avatar_url, prs } = repoData
 
+      // Check if repo already exists to preserve is_active status
+      const { data: existingRepo } = await serviceClient
+        .from('repositories')
+        .select('is_active')
+        .eq('user_id', session.user.id)
+        .eq('repo_full_name', repo_full_name)
+        .maybeSingle<{ is_active: boolean }>()
+
       // Upsert the repository into our cache with description and PR count
+      // Only set is_active to false for NEW repos, preserve existing value
       const repoUpsertData = {
         user_id: session.user.id,
         repo_full_name,
@@ -86,16 +95,13 @@ export async function POST(request: NextRequest) {
         owner_avatar_url,
         pr_count: prs.length,
         last_synced_at: now,
-        // Keep is_active as false by default (user decides to include in profile)
-        is_active: false,
+        is_active: existingRepo?.is_active ?? false,
       } as Database['public']['Tables']['repositories']['Insert']
 
       const { error: repoError } = await serviceClient
         .from('repositories')
         .upsert(repoUpsertData as never, {
           onConflict: 'user_id,repo_full_name',
-          // Don't overwrite is_active - user controls that
-          ignoreDuplicates: false,
         })
 
       if (repoError) {
