@@ -248,6 +248,8 @@ export const createSupabaseServerClient = async () => {
   })
 }
 
+export const createSupabasePublicClient = () => createBaseClient<Database>(supabaseUrl, supabaseAnonKey)
+
 // Server client for use in API routes (reads cookies from Request)
 const getRequestCookies = (request: Request | NextRequest) => {
   if ('cookies' in request && request.cookies && typeof request.cookies.getAll === 'function') {

@@ -1,6 +1,8 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
 import { searchMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
+import { getProfileResultsTag } from '@/lib/profile-results'
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -164,6 +166,8 @@ export async function POST(request: NextRequest) {
     if (metaError) {
       console.error('Error upserting sync metadata:', metaError)
     }
+
+    revalidateTag(getProfileResultsTag(typedProfile.github_username), 'max')
 
     return NextResponse.json({
       success: true,

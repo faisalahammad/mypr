@@ -5,15 +5,35 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Captures a DOM element as a PNG and triggers a download.
- * Uses dynamic import so html2canvas is only loaded on the client.
- */
-export async function downloadAsImage(element: HTMLElement, filename: string): Promise<void> {
-  const html2canvas = (await import('html2canvas')).default
-  const canvas = await html2canvas(element, { useCORS: true })
+interface DownloadImageOptions {
+  backgroundColor?: string
+  pixelRatio?: number
+  maxHeight?: number
+}
+
+export async function downloadAsImage(
+  element: HTMLElement,
+  filename: string,
+  options: DownloadImageOptions = {}
+): Promise<void> {
+  const { toPng } = await import('html-to-image')
+  const targetHeight = options.maxHeight
+    ? Math.min(element.scrollHeight, options.maxHeight)
+    : undefined
+  const dataUrl = await toPng(element, {
+    backgroundColor: options.backgroundColor ?? '#ffffff',
+    pixelRatio: options.pixelRatio ?? 2,
+    height: targetHeight,
+    style: targetHeight
+      ? {
+          maxHeight: `${targetHeight}px`,
+          height: `${targetHeight}px`,
+          overflow: 'hidden',
+        }
+      : undefined,
+  })
   const link = document.createElement('a')
   link.download = filename
-  link.href = canvas.toDataURL('image/png')
+  link.href = dataUrl
   link.click()
 }

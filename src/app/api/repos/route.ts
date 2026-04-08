@@ -1,5 +1,7 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
+import { getProfileResultsTag } from '@/lib/profile-results'
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
 
 // GET — return repositories from our local Supabase cache (no GitHub API call)
@@ -100,6 +102,16 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Database error', message: error.message },
         { status: 500 }
       )
+    }
+
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('github_username')
+      .eq('id', session.user.id)
+      .maybeSingle<{ github_username: string }>()
+
+    if (profile?.github_username) {
+      revalidateTag(getProfileResultsTag(profile.github_username), 'max')
     }
 
     return NextResponse.json({
