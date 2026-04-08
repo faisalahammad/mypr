@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
 import { PRCard } from '@/components/pr-card/PRCard'
 import type { PullRequestWithProfile } from '@/types'
 
@@ -20,8 +23,41 @@ interface TimelineProps {
  * - Dot marker at each PR position
  * - Left-aligned cards for easy scanning
  * - Empty state with custom message
+ * - Scroll-triggered fade-in animation (respects prefers-reduced-motion)
  */
 export function Timeline({ prs, emptyMessage = 'No pull requests yet' }: TimelineProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!('IntersectionObserver' in window)) return
+
+    const cards = container.querySelectorAll('[data-reveal]')
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const el = entry.target as HTMLElement
+            const index = el.dataset.index ?? '0'
+            el.style.transitionDelay = `${Number(index) * 80}ms`
+            el.classList.remove('opacity-0', 'translate-y-4')
+            el.classList.add('opacity-100', 'translate-y-0')
+            observer.unobserve(el)
+          }
+        })
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    )
+
+    cards.forEach((card) => observer.observe(card))
+
+    return () => observer.disconnect()
+  }, [prs])
+
   if (prs.length === 0) {
     return (
       <div className="text-center py-12">
@@ -47,15 +83,17 @@ export function Timeline({ prs, emptyMessage = 'No pull requests yet' }: Timelin
   }
 
   return (
-    <div className="relative">
-      {/* Vertical line */}
+    <div ref={containerRef} className="relative">
       <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" aria-hidden="true" />
 
-      {/* PR cards */}
       <div className="space-y-6">
-        {prs.map((prWithProfile) => (
-          <div key={prWithProfile.id} className="relative pl-12">
-            {/* Dot on the line */}
+        {prs.map((prWithProfile, index) => (
+          <div
+            key={prWithProfile.id}
+            data-reveal
+            data-index={index}
+            className="relative pl-12 opacity-0 translate-y-4 transition-all duration-500 ease-out"
+          >
             <div
               className="absolute left-[19px] top-6 w-3 h-3 rounded-full bg-primary border-2 border-background"
               aria-hidden="true"

@@ -1,20 +1,17 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Download, ExternalLink } from 'lucide-react'
 import { downloadAsImage } from '@/lib/utils'
 import type { PullRequest } from '@/types'
 
 interface PRCardProps {
-  pr: PullRequest
+  pr: PullRequest & { repo_owner_avatar_url?: string | null }
 }
 
-/**
- * Format date to human-readable string
- * Shows relative time for recent PRs (within 7 days), absolute date otherwise
- */
 function formatMergedDate(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()
@@ -34,17 +31,6 @@ function formatMergedDate(dateString: string): string {
   })
 }
 
-/**
- * PRCard - Displays a pull request with key metrics and GitHub link
- *
- * Shows:
- * - PR title
- * - Repository name
- * - Merged date (relative for recent PRs)
- * - Additions/deletions stats with color coding
- * - Commits count
- * - Link to GitHub PR
- */
 export function PRCard({ pr }: PRCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
@@ -60,12 +46,40 @@ export function PRCard({ pr }: PRCardProps) {
     }
   }
 
+  const repoOwner = pr.repo_full_name.split('/')[0]
+
   return (
     <div ref={cardRef}>
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{pr.title}</CardTitle>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-lg">
+            <a
+              href={pr.pr_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+            >
+              {pr.title}
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+          </CardTitle>
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            aria-label="Download PR card as image"
+            className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {pr.repo_owner_avatar_url && (
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={pr.repo_owner_avatar_url} alt={repoOwner} />
+              <AvatarFallback className="text-[9px]">{repoOwner.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          )}
           <Badge variant="secondary" className="font-normal">
             {pr.repo_full_name}
           </Badge>
@@ -74,14 +88,13 @@ export function PRCard({ pr }: PRCardProps) {
               Suggested
             </Badge>
           )}
-          <span>•</span>
+          <span>·</span>
           <span>{formatMergedDate(pr.merged_at)}</span>
         </div>
       </CardHeader>
 
       <CardContent>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Additions - Green */}
           <Badge
             variant="default"
             className="bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
@@ -89,7 +102,6 @@ export function PRCard({ pr }: PRCardProps) {
             +{pr.additions}
           </Badge>
 
-          {/* Deletions - Red */}
           <Badge
             variant="destructive"
             className="bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
@@ -97,32 +109,11 @@ export function PRCard({ pr }: PRCardProps) {
             -{pr.deletions}
           </Badge>
 
-          {/* Commits - Outline */}
           <Badge variant="outline" className="font-normal">
             {pr.commits_count} {pr.commits_count === 1 ? 'commit' : 'commits'}
           </Badge>
         </div>
       </CardContent>
-
-      <CardFooter className="flex items-center justify-between">
-        <a
-          href={pr.pr_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center rounded-lg text-sm font-medium hover:bg-muted hover:text-foreground transition-colors gap-2 px-2.5 h-7"
-        >
-          View on GitHub
-          <ExternalLink className="h-3 w-3" />
-        </a>
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          aria-label="Download PR card as image"
-          className="inline-flex items-center justify-center rounded-lg text-sm font-medium hover:bg-muted hover:text-foreground transition-colors gap-2 px-2.5 h-7 disabled:opacity-50"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </button>
-      </CardFooter>
     </Card>
     </div>
   )
