@@ -1,31 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
-  CheckCircle2,
-  RefreshCw,
-  GitPullRequest,
   Calendar,
-  Clock,
-  Database,
+  CheckCircle2,
   ChevronDown,
-  ToggleLeft,
-  ToggleRight,
+  Clock3,
+  Database,
+  GitPullRequest,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { AppShell } from '@/components/layout/AppShell'
 import type { DateRange } from '@/lib/github'
 
-const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
-  { value: '1m', label: 'Last 1 month' },
-  { value: '3m', label: 'Last 3 months' },
-  { value: '6m', label: 'Last 6 months' },
-  { value: '12m', label: 'Last 12 months' },
-  { value: '24m', label: 'Last 24 months' },
-  { value: 'lifetime', label: 'Lifetime (all time)' },
+const DATE_RANGE_OPTIONS: { value: DateRange; label: string; hint: string }[] = [
+  { value: '1m', label: 'Last 1 month', hint: 'Fastest sync window' },
+  { value: '3m', label: 'Last 3 months', hint: 'Balanced default range' },
+  { value: '6m', label: 'Last 6 months', hint: 'Good for quarterly reviews' },
+  { value: '12m', label: 'Last 12 months', hint: 'A full year of work' },
+  { value: '24m', label: 'Last 24 months', hint: 'Long-term activity' },
+  { value: 'lifetime', label: 'Lifetime', hint: 'Everything we can find' },
 ]
 
 interface SyncStatus {
@@ -86,6 +86,8 @@ export default function SettingsPage() {
   const [pendingRepos, setPendingRepos] = useState<Record<string, boolean>>({})
   const [dateRange, setDateRange] = useState<DateRange>('3m')
   const [showDateDropdown, setShowDateDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const selectedRange = DATE_RANGE_OPTIONS.find((option) => option.value === dateRange) ?? DATE_RANGE_OPTIONS[1]
 
   const fetchSyncStatus = async () => {
     try {
@@ -93,7 +95,9 @@ export default function SettingsPage() {
       if (!response.ok) return
       const data = await response.json()
       setSyncInfo(data)
-    } catch { /* silent */ }
+    } catch {
+      // noop
+    }
   }
 
   const fetchRepos = async () => {
@@ -118,12 +122,16 @@ export default function SettingsPage() {
     if (pendingRepos[repoFullName]) return
 
     setRepoUpdateError(null)
-    setPendingRepos(cur => ({ ...cur, [repoFullName]: true }))
+    setPendingRepos((current) => ({ ...current, [repoFullName]: true }))
 
-    const prevRepos = repos
-    const prevActiveCount = activeCount
-    setRepos(repos.map(r => r.repo_full_name === repoFullName ? { ...r, is_active: nextValue } : r))
-    setActiveCount(cur => cur + (nextValue ? 1 : -1))
+    const previousRepos = repos
+    const previousActiveCount = activeCount
+    setRepos(repos.map((repo) => (
+      repo.repo_full_name === repoFullName
+        ? { ...repo, is_active: nextValue }
+        : repo
+    )))
+    setActiveCount((current) => current + (nextValue ? 1 : -1))
 
     try {
       const response = await fetch('/api/repos', {
@@ -136,11 +144,11 @@ export default function SettingsPage() {
         throw new Error(data.message || 'Failed to update repository')
       }
     } catch (error) {
-      setRepos(prevRepos)
-      setActiveCount(prevActiveCount)
+      setRepos(previousRepos)
+      setActiveCount(previousActiveCount)
       setRepoUpdateError(error instanceof Error ? error.message : 'Failed to update repository')
     } finally {
-      setPendingRepos(cur => ({ ...cur, [repoFullName]: false }))
+      setPendingRepos((current) => ({ ...current, [repoFullName]: false }))
     }
   }
 
@@ -155,13 +163,28 @@ export default function SettingsPage() {
       })
       const data = await response.json()
       if (response.ok) {
-        setSyncStatus({ success: true, synced: data.synced, repos_found: data.repos_found, message: data.message })
+        setSyncStatus({
+          success: true,
+          synced: data.synced,
+          repos_found: data.repos_found,
+          message: data.message,
+        })
         await Promise.all([fetchSyncStatus(), fetchRepos()])
       } else {
-        setSyncStatus({ success: false, synced: 0, message: data.message || 'Failed to sync PRs', error: data.error })
+        setSyncStatus({
+          success: false,
+          synced: 0,
+          message: data.message || 'Failed to sync PRs',
+          error: data.error,
+        })
       }
     } catch (error) {
-      setSyncStatus({ success: false, synced: 0, message: error instanceof Error ? error.message : 'Network error', error: 'Network error' })
+      setSyncStatus({
+        success: false,
+        synced: 0,
+        message: error instanceof Error ? error.message : 'Network error',
+        error: 'Network error',
+      })
     } finally {
       setIsSyncing(false)
     }
@@ -171,247 +194,324 @@ export default function SettingsPage() {
     Promise.allSettled([fetchRepos(), fetchSyncStatus()])
   }, [])
 
-  const selectedRangeLabel = DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label ?? 'Select range'
+  useEffect(() => {
+    if (!showDateDropdown) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDateDropdown(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDateDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showDateDropdown])
+
+  const repoStats = useMemo(() => {
+    const totalRepos = repos.length
+    const inactiveCount = totalRepos - activeCount
+    const totalCachedPRs = repos.reduce((sum, repo) => sum + repo.pr_count, 0)
+    return { totalRepos, inactiveCount, totalCachedPRs }
+  }, [activeCount, repos])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/30">
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-6">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(235,71,153,0.12),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.88))]">
+      <AppShell className="py-10">
+        <div className="space-y-6">
+          <section className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+            <Card className="overflow-visible border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
+              <div className="flex flex-col gap-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Contribution sync
+                    </p>
+                    <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+                    <p className="mt-2 max-w-2xl text-muted-foreground">
+                      Keep your public portfolio fresh, choose the PR window you want to sync, and decide which repositories deserve a spotlight.
+                    </p>
+                  </div>
+                  <GitHubMark />
+                </div>
 
-        {/* Page header */}
-        <div className="mb-2">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Sync your approved merged PRs from GitHub and manage which repos appear on your profile.
-          </p>
-        </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Cached PRs</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">{syncInfo?.total_prs ?? repoStats.totalCachedPRs}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Active repos</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">{activeCount}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Selected range</p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{selectedRange.label}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Last synced</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">{formatDate(syncInfo?.last_synced ?? null)}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
 
-        {/* ── Sync Card ── */}
-        <Card className="p-6 space-y-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Sync Pull Requests</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Fetches your PRs that were authored by you, merged, and approved by a reviewer.
+            <Card className="border-white/60 bg-slate-950 p-6 text-white shadow-lg shadow-slate-950/15">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Sync overview</p>
+              <h2 className="mt-3 text-2xl font-semibold">Fetch approved merged PRs</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-300">
+                We search GitHub for pull requests you authored that were approved and merged, then refresh your cached repository stats.
               </p>
-            </div>
-            <GitHubMark />
-          </div>
 
-          {/* Sync info bar */}
-          {syncInfo && (
-            <div className="flex flex-wrap gap-4 text-sm rounded-lg border border-border bg-muted/40 px-4 py-3">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Database className="h-3.5 w-3.5" />
-                <strong className="text-foreground">{syncInfo.total_prs}</strong> PRs cached
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                Last synced: <strong className="text-foreground">{formatDate(syncInfo.last_synced)}</strong>
-              </span>
-            </div>
-          )}
+              <div className="mt-5 space-y-3 text-sm text-slate-300">
+                <div className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
+                  <span>Repositories in cache</span>
+                  <strong className="text-white">{repoStats.totalRepos}</strong>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
+                  <span>Hidden repos</span>
+                  <strong className="text-white">{repoStats.inactiveCount}</strong>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
+                  <span>Range hint</span>
+                  <strong className="text-white">{selectedRange.hint}</strong>
+                </div>
+              </div>
+            </Card>
+          </section>
 
-          {/* Controls row */}
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Date range picker */}
-            <div className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted/60 transition-colors"
-                onClick={() => setShowDateDropdown(v => !v)}
-              >
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                {selectedRangeLabel}
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showDateDropdown ? 'rotate-180' : ''}`} />
-              </button>
+          <section className="grid gap-6 xl:grid-cols-[1.2fr_1.8fr]">
+            <Card className="overflow-visible border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground">Sync your data</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Choose a date range, then refresh both PR history and repository cache in one pass.
+                  </p>
+                </div>
+                <RefreshCw className={`h-5 w-5 text-primary ${isSyncing ? 'animate-spin' : ''}`} />
+              </div>
 
-              {showDateDropdown && (
-                <div className="absolute z-20 mt-1 left-0 min-w-[180px] rounded-lg border border-border bg-card shadow-lg overflow-hidden">
-                  {DATE_RANGE_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted/60 ${dateRange === opt.value ? 'text-primary font-medium bg-primary/5' : 'text-foreground'}`}
-                      onClick={() => { setDateRange(opt.value); setShowDateDropdown(false) }}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={showDateDropdown}
+                    className="flex min-w-[220px] items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-medium shadow-sm transition-colors hover:bg-muted/60"
+                    onClick={() => setShowDateDropdown((current) => !current)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      {selectedRange.label}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showDateDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showDateDropdown && (
+                    <div
+                      role="listbox"
+                      className="absolute left-0 z-30 mt-2 max-h-72 min-w-[260px] overflow-y-auto rounded-2xl border border-border bg-popover p-2 shadow-2xl shadow-slate-900/10"
                     >
-                      {opt.label}
-                    </button>
+                      {DATE_RANGE_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="option"
+                          aria-selected={dateRange === option.value}
+                          className={`flex w-full flex-col rounded-xl px-3 py-3 text-left transition-colors ${
+                            dateRange === option.value
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-foreground hover:bg-muted/60'
+                          }`}
+                          onClick={() => {
+                            setDateRange(option.value)
+                            setShowDateDropdown(false)
+                          }}
+                        >
+                          <span className="font-medium">{option.label}</span>
+                          <span className="text-xs text-muted-foreground">{option.hint}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  className="min-w-[160px] rounded-2xl gap-2 px-5 py-6 text-base"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Syncing…
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Sync PRs
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {syncStatus && (
+                <div className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-sm ${
+                  syncStatus.success
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-destructive/30 bg-destructive/10 text-destructive'
+                }`}>
+                  {syncStatus.success ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  ) : (
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-medium">{syncStatus.message}</p>
+                    {syncStatus.success && syncStatus.repos_found !== undefined && (
+                      <p className="mt-1 text-xs opacity-80">
+                        Found {syncStatus.repos_found} repositories with approved merged PRs in this range.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-5 rounded-2xl border border-border bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">What happens during sync</p>
+                <ol className="mt-2 space-y-1.5">
+                  <li>1. Search GitHub for PRs you authored that were merged and approved.</li>
+                  <li>2. Refresh repository cache entries and update per-repo PR counts.</li>
+                  <li>3. Use the toggles below to decide what appears on your public profile.</li>
+                </ol>
+              </div>
+            </Card>
+
+            <Card className="border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground">Repository visibility</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Highlight the repos you want on your public timeline. Hidden repos stay cached but out of sight.
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                  <Database className="h-3.5 w-3.5" />
+                  {activeCount} active / {repoStats.totalRepos} total
+                </div>
+              </div>
+
+              {repoUpdateError && (
+                <div className="mt-4 flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{repoUpdateError}</span>
+                </div>
+              )}
+
+              {isLoadingRepos && (
+                <div className="mt-5 grid gap-3">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="h-28 animate-pulse rounded-2xl border border-border bg-muted/30" />
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Sync button */}
-            <Button
-              onClick={handleSync}
-              disabled={isSyncing}
-              size="default"
-              className="gap-2 min-w-[130px]"
-            >
-              {isSyncing ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Syncing…
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                  Sync PRs
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Sync result feedback */}
-          {syncStatus && (
-            <div className={`flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm ${
-              syncStatus.success
-                ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20'
-                : 'bg-destructive/10 text-destructive border border-destructive/20'
-            }`}>
-              {syncStatus.success
-                ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-                : <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />}
-              <div>
-                <p className="font-medium">{syncStatus.message}</p>
-                {syncStatus.success && syncStatus.repos_found !== undefined && (
-                  <p className="text-xs opacity-75 mt-0.5">
-                    Found {syncStatus.repos_found} repo{syncStatus.repos_found !== 1 ? 's' : ''} with approved PRs.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* How it works */}
-          <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm space-y-1 text-muted-foreground">
-            <p className="font-medium text-foreground mb-1.5">How it works</p>
-            <p>1. Choose a time range and click <strong>Sync PRs</strong>.</p>
-            <p>2. We search GitHub for PRs you authored that were merged and approved.</p>
-            <p>3. Repos appear below — toggle them on to include in your public profile.</p>
-          </div>
-        </Card>
-
-        {/* ── Repositories Card ── */}
-        <Card className="p-6">
-          <div className="flex flex-col gap-1 mb-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Repositories</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Only repos with approved merged PRs appear here. Toggle to show on your public profile.
-              </p>
-            </div>
-            {repos.length > 0 && (
-              <span className="text-xs font-medium rounded-full bg-muted border border-border px-3 py-1 text-muted-foreground whitespace-nowrap">
-                {activeCount} active / {repos.length} total
-              </span>
-            )}
-          </div>
-
-          {repoUpdateError && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{repoUpdateError}</span>
-            </div>
-          )}
-
-          {/* Loading skeleton */}
-          {isLoadingRepos && (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="animate-pulse rounded-xl border border-border bg-muted/30 p-4 h-20" />
-              ))}
-            </div>
-          )}
-
-          {/* Error state */}
-          {repoError && !isLoadingRepos && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/60 dark:bg-amber-950/20">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-300 shrink-0" />
-                <div className="space-y-3">
-                  <p className="font-medium text-amber-900 dark:text-amber-100">Unable to load repositories</p>
-                  <p className="text-sm text-amber-800 dark:text-amber-200">{repoError}</p>
-                  <Button onClick={fetchRepos} size="sm" variant="outline">Retry</Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Empty state — no sync done yet */}
-          {!isLoadingRepos && !repoError && repos.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border p-10 text-center">
-              <GitPullRequest className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="font-medium text-foreground">No repos found yet</p>
-              <p className="mt-1 text-sm text-muted-foreground max-w-xs mx-auto">
-                Hit <strong>Sync PRs</strong> above and we'll find every repo where your PRs were approved and merged.
-              </p>
-            </div>
-          )}
-
-          {/* Repository list */}
-          {!isLoadingRepos && !repoError && repos.length > 0 && (
-            <div className="space-y-3">
-              {repos.map(repo => {
-                const [owner, name] = repo.repo_full_name.split('/')
-                const isPending = pendingRepos[repo.repo_full_name]
-                return (
-                  <div
-                    key={repo.repo_full_name}
-                    className={`rounded-xl border bg-card p-4 shadow-sm transition-all duration-200 ${
-                      repo.is_active
-                        ? 'border-primary/30 ring-1 ring-primary/10'
-                        : 'border-border'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="min-w-0 space-y-1">
-                        {/* Repo name */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-muted-foreground font-mono">{owner}/</span>
-                          <span className="font-semibold text-foreground truncate">{name}</span>
-                        </div>
-
-                        {/* Description */}
-                        {repo.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">{repo.description}</p>
-                        )}
-
-                        {/* Stats */}
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <GitPullRequest className="h-3.5 w-3.5 text-primary" />
-                            <strong className="text-foreground">{repo.pr_count}</strong> merged PR{repo.pr_count !== 1 ? 's' : ''}
-                          </span>
-                          {repo.last_synced_at && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDate(repo.last_synced_at)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Toggle */}
-                      <div className="flex items-center gap-2.5 shrink-0">
-                        <span className={`text-xs font-medium ${repo.is_active ? 'text-primary' : 'text-muted-foreground'}`}>
-                          {repo.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                        <Switch
-                          aria-label={`Toggle repository ${repo.repo_full_name}`}
-                          checked={repo.is_active}
-                          disabled={isPending}
-                          onCheckedChange={checked => handleRepoToggle(repo.repo_full_name, checked)}
-                        />
-                      </div>
+              {repoError && !isLoadingRepos && (
+                <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+                    <div className="space-y-3">
+                      <p className="font-medium text-amber-900">Unable to load repositories</p>
+                      <p className="text-sm text-amber-800">{repoError}</p>
+                      <Button onClick={fetchRepos} size="sm" variant="outline">Retry</Button>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </Card>
-      </div>
+                </div>
+              )}
+
+              {!isLoadingRepos && !repoError && repos.length === 0 && (
+                <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-14 text-center">
+                  <GitPullRequest className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-lg font-medium text-foreground">No repositories discovered yet</p>
+                  <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                    Start a sync to build your repository cache. Once PRs are found, you can curate exactly what shows on your profile.
+                  </p>
+                </div>
+              )}
+
+              {!isLoadingRepos && !repoError && repos.length > 0 && (
+                <div className="mt-5 grid gap-3">
+                  {repos.map((repo) => {
+                    const [owner, name] = repo.repo_full_name.split('/')
+                    const isPending = pendingRepos[repo.repo_full_name]
+
+                    return (
+                      <div
+                        key={repo.repo_full_name}
+                        className={`rounded-3xl border p-5 transition-all ${
+                          repo.is_active
+                            ? 'border-primary/30 bg-primary/5 shadow-sm shadow-primary/10'
+                            : 'border-border bg-background/80'
+                        }`}
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                                {owner}
+                              </span>
+                              <h3 className="text-lg font-semibold text-foreground">{name}</h3>
+                            </div>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {repo.description || 'No repository description available yet.'}
+                            </p>
+                            <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
+                                <GitPullRequest className="h-3.5 w-3.5 text-primary" />
+                                <strong className="text-foreground">{repo.pr_count}</strong> merged PR{repo.pr_count !== 1 ? 's' : ''}
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                {formatDate(repo.last_synced_at)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 lg:min-w-[220px]">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{repo.is_active ? 'Visible on profile' : 'Hidden from profile'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {repo.is_active ? 'This repo appears on your timeline.' : 'Still cached, but not displayed publicly.'}
+                              </p>
+                            </div>
+                            <Switch
+                              aria-label={`Toggle repository ${repo.repo_full_name}`}
+                              checked={repo.is_active}
+                              disabled={isPending}
+                              onCheckedChange={(checked) => handleRepoToggle(repo.repo_full_name, checked)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </Card>
+          </section>
+        </div>
+      </AppShell>
     </div>
   )
 }

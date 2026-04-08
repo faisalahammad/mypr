@@ -371,8 +371,164 @@ export const getFollowedPRs = async (
     deletions: pr.deletions,
     commits_count: pr.commits_count,
     synced_at: pr.synced_at,
+    source: 'followed' as const,
     profile: pr.profiles || null,
   }))
+}
+
+const getFollowingIds = async (userId: string) => {
+  const supabase = await createSupabaseServerClient()
+  const { data: follows, error } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId)
+
+  if (error || !follows) {
+    if (error) {
+      console.error('Error fetching follows:', error)
+    }
+    return []
+  }
+
+  return follows.map((follow: any) => follow.following_id)
+}
+
+const getFollowedPRCount = async (userId: string) => {
+  const supabase = await createSupabaseServerClient()
+  const followingIds = await getFollowingIds(userId)
+
+  if (followingIds.length === 0) {
+    return 0
+  }
+
+  const { count } = await supabase
+    .from('pull_requests')
+    .select('*', { count: 'exact', head: true })
+    .in('user_id', followingIds)
+
+  return count || 0
+}
+
+export const getSuggestedPRs = async (
+  userId: string,
+  limit = 20,
+  offset = 0
+) => {
+  const supabase = await createSupabaseServerClient()
+  const followingIds = await getFollowingIds(userId)
+  const excludedIds = [userId, ...followingIds]
+
+  const { data: candidateRepos, error: repoError } = await supabase
+    .from('repositories')
+    .select('user_id, pr_count, last_synced_at')
+    .eq('is_active', true)
+    .order('last_synced_at', { ascending: false })
+    .order('pr_count', { ascending: false })
+
+  if (repoError || !candidateRepos) {
+    if (repoError) {
+      console.error('Error fetching suggested repos:', repoError)
+    }
+    return { prs: [], hasMore: false, total: 0 }
+  }
+
+  const typedCandidateRepos = (candidateRepos ?? []) as Array<{
+    user_id: string
+    pr_count: number
+    last_synced_at: string | null
+  }>
+
+  const candidateIds = Array.from(
+    new Set(
+      typedCandidateRepos
+        .map((repo) => repo.user_id)
+        .filter((candidateId) => !excludedIds.includes(candidateId))
+    )
+  )
+
+  if (candidateIds.length === 0) {
+    return { prs: [], hasMore: false, total: 0 }
+  }
+
+  const { data: prs, error: prsError, count } = await supabase
+    .from('pull_requests')
+    .select(`
+      id,
+      user_id,
+      repo_full_name,
+      pr_number,
+      title,
+      body_summary,
+      pr_url,
+      merged_at,
+      additions,
+      deletions,
+      commits_count,
+      synced_at,
+      profiles (
+        github_username,
+        github_avatar_url,
+        display_name
+      )
+    `, { count: 'exact' })
+    .in('user_id', candidateIds)
+    .order('merged_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (prsError || !prs) {
+    if (prsError) {
+      console.error('Error fetching suggested PRs:', prsError)
+    }
+    return { prs: [], hasMore: false, total: 0 }
+  }
+
+  return {
+    prs: prs.map((pr: any) => ({
+      id: pr.id,
+      user_id: pr.user_id,
+      repo_full_name: pr.repo_full_name,
+      pr_number: pr.pr_number,
+      title: pr.title,
+      body_summary: pr.body_summary,
+      pr_url: pr.pr_url,
+      merged_at: pr.merged_at,
+      additions: pr.additions,
+      deletions: pr.deletions,
+      commits_count: pr.commits_count,
+      synced_at: pr.synced_at,
+      source: 'suggested' as const,
+      profile: pr.profiles || null,
+    })),
+    hasMore: count !== null && offset + limit < count,
+    total: count || 0,
+  }
+}
+
+export const getMixedFeedPRs = async (
+  userId: string,
+  limit = 20,
+  offset = 0
+) => {
+  const followedTotal = await getFollowedPRCount(userId)
+  const followedPRs = await getFollowedPRs(userId, limit, offset)
+
+  if (followedPRs.length === limit) {
+    return {
+      prs: followedPRs,
+      hasMore: offset + limit < followedTotal,
+    }
+  }
+
+  const remaining = Math.max(0, limit - followedPRs.length)
+  const suggestedOffset = Math.max(0, offset - followedTotal)
+  const suggested = remaining > 0
+    ? await getSuggestedPRs(userId, remaining, suggestedOffset)
+    : { prs: [], hasMore: false, total: 0 }
+
+  return {
+    prs: [...followedPRs, ...suggested.prs],
+    hasMore: offset + limit < followedTotal + suggested.total,
+  }
 }
 
 /**

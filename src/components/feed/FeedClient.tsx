@@ -60,7 +60,7 @@ export function FeedClient({ initialPRs, initialHasMore }: FeedClientProps) {
 
   if (prs.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="rounded-3xl border border-dashed border-border bg-card/70 px-6 py-14 text-center shadow-sm">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
           <svg
             className="w-8 h-8 text-muted-foreground"
@@ -77,8 +77,11 @@ export function FeedClient({ initialPRs, initialHasMore }: FeedClientProps) {
             />
           </svg>
         </div>
-        <p className="text-lg text-muted-foreground">
-          You're not following anyone yet. Visit a developer's profile to follow them and see their pull requests here.
+        <p className="text-lg font-medium text-foreground">
+          Discover contributors to follow
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          We will surface active developers here as your network grows. Follow a few contributors to personalize this feed.
         </p>
       </div>
     )

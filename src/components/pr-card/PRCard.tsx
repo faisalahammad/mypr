@@ -69,6 +69,11 @@ export function PRCard({ pr }: PRCardProps) {
           <Badge variant="secondary" className="font-normal">
             {pr.repo_full_name}
           </Badge>
+          {pr.source === 'suggested' && (
+            <Badge variant="outline" className="font-normal border-primary/30 text-primary">
+              Suggested
+            </Badge>
+          )}
           <span>•</span>
           <span>{formatMergedDate(pr.merged_at)}</span>
         </div>

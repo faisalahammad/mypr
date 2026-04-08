@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase-client'
 import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton'
+import { AppShell } from '@/components/layout/AppShell'
 
 // For authenticated users — inner page links
 type HeaderNavItem = {
@@ -45,7 +46,8 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const navItems = isLandingPage ? LANDING_NAV : APP_NAV
+  const isAuthenticatedView = Boolean(username)
+  const navItems = isLandingPage ? LANDING_NAV : (isAuthenticatedView ? APP_NAV : [])
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -59,7 +61,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 h-14 lg:px-6">
+      <AppShell className="flex h-14 items-center justify-between">
 
         {/* Logo */}
         <Link href={username ? '/feed' : '/'} className="flex items-center gap-2 group">
@@ -114,7 +116,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
 
         {/* Right side: avatar + sign out */}
         <div className="flex items-center gap-2">
-          {!isLandingPage && avatarUrl && username && (
+          {isAuthenticatedView && avatarUrl && username && (
             <Link href={`/${username}`} aria-label="Your profile">
               <img
                 src={avatarUrl}
@@ -124,7 +126,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
             </Link>
           )}
 
-          {isLandingPage ? (
+          {!isAuthenticatedView ? (
             <GitHubLoginButton
               size="sm"
               variant="outline"
@@ -153,7 +155,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-      </div>
+      </AppShell>
 
       {/* Mobile menu */}
       {menuOpen && (
@@ -175,7 +177,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
               {label}
             </Link>
           ))}
-          {!isLandingPage && username && (
+          {isAuthenticatedView && username && (
             <Link
               href={`/${username}`}
               onClick={() => setMenuOpen(false)}
@@ -187,7 +189,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
               Profile
             </Link>
           )}
-          {isLandingPage ? (
+          {!isAuthenticatedView ? (
             <GitHubLoginButton
               variant="outline"
               className="w-full justify-center"

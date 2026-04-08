@@ -75,8 +75,19 @@ describe('FeedClient', () => {
     render(<FeedClient initialPRs={[]} initialHasMore={false} />)
 
     expect(
-      screen.getByText(/You're not following anyone yet/i)
+      screen.getByText(/Discover contributors to follow/i)
     ).toBeInTheDocument()
+  })
+
+  it('should show suggested badge for suggested PRs', () => {
+    render(
+      <FeedClient
+        initialPRs={[{ ...mockPRs[0], source: 'suggested' }]}
+        initialHasMore={false}
+      />
+    )
+
+    expect(screen.getByText('Suggested')).toBeInTheDocument()
   })
 
   it('should show Load more button when hasMore is true', () => {

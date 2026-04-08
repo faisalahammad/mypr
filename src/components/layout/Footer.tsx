@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { GitPullRequestArrow } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
 
 function GitHubIcon() {
   return (
@@ -30,7 +31,7 @@ export default function Footer({ isLandingPage = false }: FooterProps) {
 
   return (
     <footer className="border-t border-border bg-muted/30 py-6">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 lg:px-6">
+      <AppShell className="flex flex-wrap items-center justify-between gap-4">
 
         {/* Logo */}
         <div className="flex items-center gap-2">
@@ -70,7 +71,7 @@ export default function Footer({ isLandingPage = false }: FooterProps) {
             <GitHubIcon />
           </a>
         </div>
-      </div>
+      </AppShell>
     </footer>
   )
 }

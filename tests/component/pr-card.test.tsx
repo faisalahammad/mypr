@@ -155,4 +155,9 @@ describe('PRCard', () => {
     const downloadBtn = screen.getByRole('button', { name: /download pr card/i })
     expect(downloadBtn).not.toBeDisabled()
   })
+
+  it('renders suggested badge when the feed item is suggested', () => {
+    render(<PRCard pr={{ ...mockPR, source: 'suggested' }} />)
+    expect(screen.getByText('Suggested')).toBeInTheDocument()
+  })
 })

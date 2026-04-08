@@ -36,6 +36,7 @@ export interface PullRequest {
   deletions: number
   commits_count: number
   synced_at: string
+  source?: 'followed' | 'suggested'
 }
 
 export interface PullRequestWithProfile extends PullRequest {

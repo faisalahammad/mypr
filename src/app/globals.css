@@ -201,6 +201,19 @@
   animation: shimmer 3s ease-in-out infinite;
 }
 
+.app-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-inline: 1.5rem;
+  }
+}
+
 /* ─── Reduced motion ────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

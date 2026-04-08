@@ -1,7 +1,6 @@
-import { requireAuth, getFollowedPRs } from '@/lib/supabase'
+import { requireAuth, getMixedFeedPRs } from '@/lib/supabase'
 import { FeedClient } from '@/components/feed/FeedClient'
-import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
+import { AppShell } from '@/components/layout/AppShell'
 
 // Force dynamic rendering - don't statically generate during build
 export const dynamic = 'force-dynamic'
@@ -19,26 +18,20 @@ export default async function FeedPage() {
   // Require authentication - will redirect to /login if not authenticated
   const user = await requireAuth()
 
-  // Fetch PRs from followed users (first 20)
-  const prs = await getFollowedPRs(user.id, 20, 0)
-
-  // Check if there are more PRs to load for pagination
-  // We do this by making another query with limit=1 to see if there's a 21st PR
-  const checkMorePRs = await getFollowedPRs(user.id, 1, 20)
-  const hasMore = checkMorePRs.length > 0
+  const { prs, hasMore } = await getMixedFeedPRs(user.id, 20, 0)
 
   return (
-    <div className="container max-w-3xl mx-auto py-8 px-4">
+    <AppShell className="py-10">
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Your Feed</h1>
         <p className="text-muted-foreground mt-2">
-          Pull requests from developers you follow
+          Pull requests from developers you follow, plus suggested contributors when your feed needs a boost.
         </p>
       </div>
 
       {/* Client component for feed with pagination */}
       <FeedClient initialPRs={prs} initialHasMore={hasMore} />
-    </div>
+    </AppShell>
   )
 }
