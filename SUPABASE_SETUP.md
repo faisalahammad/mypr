@@ -75,7 +75,12 @@ supabase db push
    - Add your GitHub OAuth credentials:
      - Client ID: from GitHub OAuth app
      - Secret: from GitHub OAuth app
-   - Redirect URL: `https://xlayjufjlhfgkblymdsu.supabase.co/auth/v1/callback`
+   - Provider callback URL stays: `https://xlayjufjlhfgkblymdsu.supabase.co/auth/v1/callback`
+   - Site URL: `https://mypr.pro.bd`
+   - Add Redirect URLs:
+     - `https://mypr.pro.bd/api/auth/callback`
+     - `https://*.vercel.app/api/auth/callback`
+     - `http://localhost:3000/api/auth/callback`
 
 3. **Update GitHub OAuth App Callback URL**
    - In GitHub OAuth app settings, add this callback URL:
@@ -145,7 +150,9 @@ After migration is complete:
 - Check RLS policies allow service role operations
 
 **GitHub OAuth not working**
-- Verify callback URL matches exactly
+- Verify the GitHub OAuth app callback URL still points to Supabase
+- Verify the app callback URL is present in Supabase Redirect URLs
+- Verify the Supabase Site URL is `https://mypr.pro.bd`
 - Check GitHub OAuth app credentials
 - Ensure GitHub provider is enabled in Supabase
 

@@ -1,17 +1,37 @@
 'use client'
 
-import { createSupabaseClient } from '@/lib/supabase-client'
+import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { appendNextParam, getSafeAuthRedirectPath } from '@/lib/auth-redirect'
+import { createSupabaseClient } from '@/lib/supabase-client'
 
-export default function LoginPage() {
+function LoginPageContent() {
+  const searchParams = useSearchParams()
+
   const handleLogin = async () => {
     const supabase = createSupabaseClient()
-    await supabase.auth.signInWithOAuth({
+    const nextPath = getSafeAuthRedirectPath(searchParams.get('redirect'))
+    const redirectTo = appendNextParam(
+      `${window.location.origin}/api/auth/callback`,
+      nextPath
+    )
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
+        redirectTo
       }
     })
+
+    if (error) {
+      console.error('OAuth error:', error)
+      return
+    }
+
+    if (data?.url) {
+      window.location.assign(data.url)
+    }
   }
 
   return (
@@ -59,5 +79,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   )
 }

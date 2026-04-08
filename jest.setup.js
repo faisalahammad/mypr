@@ -38,27 +38,35 @@ global.Response = class MockResponse {
 
 global.Headers = class MockHeaders {
   constructor(init = []) {
-    this.headers = new Map(init)
+    this.headers = new Map()
+
+    if (Array.isArray(init)) {
+      init.forEach(([name, value]) => this.set(name, value))
+    } else if (init instanceof MockHeaders) {
+      init.forEach((value, name) => this.set(name, value))
+    } else if (init && typeof init === 'object') {
+      Object.entries(init).forEach(([name, value]) => this.set(name, value))
+    }
   }
 
   append(name, value) {
-    this.headers.set(name, value)
+    this.headers.set(name.toLowerCase(), value)
   }
 
   get(name) {
-    return this.headers.get(name)
+    return this.headers.get(name.toLowerCase())
   }
 
   set(name, value) {
-    this.headers.set(name, value)
+    this.headers.set(name.toLowerCase(), value)
   }
 
   delete(name) {
-    this.headers.delete(name)
+    this.headers.delete(name.toLowerCase())
   }
 
   has(name) {
-    return this.headers.has(name)
+    return this.headers.has(name.toLowerCase())
   }
 
   entries() {
@@ -67,5 +75,9 @@ global.Headers = class MockHeaders {
 
   forEach(callback) {
     this.headers.forEach((value, name) => callback(value, name, this))
+  }
+
+  [Symbol.iterator]() {
+    return this.entries()
   }
 }
