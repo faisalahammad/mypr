@@ -1,7 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import type { NextRequest, NextResponse } from 'next/server'
 import { createClient as createBaseClient } from '@supabase/supabase-js'
+import { applySupabaseCookies } from './supabase-cookie-bridge'
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -134,40 +136,43 @@ export const createSupabaseServerClient = async () => {
       getAll() {
         return cookieStore.getAll()
       },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
-        } catch {
-          // The `setAll` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
-        }
-      },
     },
   })
 }
 
 // Server client for use in API routes (reads cookies from Request)
-export const createSupabaseRouteHandlerClient = (request: Request) => {
-  const requestHeaders = new Headers(request.headers)
-  const cookieHeader = requestHeaders.get('cookie')
+const getRequestCookies = (request: Request | NextRequest) => {
+  if ('cookies' in request && request.cookies && typeof request.cookies.getAll === 'function') {
+    return request.cookies.getAll()
+  }
 
+  const cookieHeader = request.headers.get('cookie')
+
+  if (!cookieHeader) {
+    return []
+  }
+
+  return cookieHeader.split(';').map((cookie) => {
+    const [name, ...values] = cookie.split('=')
+    return { name: name.trim(), value: values.join('=') }
+  })
+}
+
+export const createSupabaseRouteHandlerClient = (
+  request: Request | NextRequest,
+  response?: NextResponse
+) => {
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        if (!cookieHeader) return []
-        return cookieHeader.split(';').map((cookie) => {
-          const [name, ...values] = cookie.split('=')
-          return { name: name.trim(), value: values.join('=') }
-        })
+        return getRequestCookies(request)
       },
       setAll(cookiesToSet) {
-        // This method won't be used in API routes since we return cookies via headers
-        cookiesToSet.forEach(({ name, value, options }) => {
-          const setCookieHeader = `${name}=${value}; Path=${options?.path || '/'}`
-          requestHeaders.append('set-cookie', setCookieHeader)
-        })
+        if (!response) {
+          return
+        }
+
+        applySupabaseCookies(request, response, cookiesToSet)
       },
     },
   })
@@ -215,8 +220,15 @@ export const getSession = async () => {
  * Returns null if not authenticated
  */
 export const getUser = async () => {
-  const session = await getSession()
-  return session?.user ?? null
+  const supabase = await createSupabaseServerClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error) {
+    console.error('Error getting user:', error)
+    return null
+  }
+
+  return user
 }
 
 /**

@@ -1,18 +1,21 @@
 'use client'
 
-import { createClient } from '@supabase/supabase-js'
+import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { appendNextParam, getSafeAuthRedirectPath } from '@/lib/auth-redirect'
+import { createSupabaseClient } from '@/lib/supabase-client'
 
-export default function LoginPage() {
+function LoginPageContent() {
+  const searchParams = useSearchParams()
+
   const handleLogin = async () => {
-    // Use the regular createClient for OAuth (better redirect handling)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const supabase = createSupabaseClient()
+    const nextPath = getSafeAuthRedirectPath(searchParams.get('redirect'))
+    const redirectTo = appendNextParam(
+      `${window.location.origin}/api/auth/callback`,
+      nextPath
     )
-
-    const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
-    console.log('OAuth redirectTo:', redirectTo)
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
@@ -26,9 +29,8 @@ export default function LoginPage() {
       return
     }
 
-    // Manually redirect to ensure the flow works
     if (data?.url) {
-      window.location.href = data.url
+      window.location.assign(data.url)
     }
   }
 
@@ -77,5 +79,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   )
 }

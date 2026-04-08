@@ -28,7 +28,7 @@ Update MEMORY.md at the end of each session to reflect progress.
 ## Phase 2: Supabase Setup ✅ COMPLETE
 
 - [x] **2.1 — Create Supabase project and configure GitHub OAuth**
-  Create a new Supabase project. In the Supabase dashboard, enable GitHub as an OAuth provider. Set the callback URL to `https://mypr.pro.bd/api/auth/callback`. Record the client ID and secret.
+  Create a new Supabase project. In the Supabase dashboard, enable GitHub as an OAuth provider. Keep the GitHub OAuth app callback URL set to the Supabase provider callback (`https://<project-ref>.supabase.co/auth/v1/callback`). Add `https://mypr.pro.bd/api/auth/callback` to the Supabase Auth Redirect URLs list and set the Site URL to `https://mypr.pro.bd`. Record the client ID and secret.
   _External: Supabase dashboard, GitHub OAuth app settings_
 
 - [x] **2.2 — Create database tables**

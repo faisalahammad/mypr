@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { buildAuthCallbackPath } from "@/lib/auth-redirect";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -177,12 +178,16 @@ function MarqueeStrip() {
 // Force dynamic rendering - don't statically generate during build
 export const dynamic = 'force-dynamic'
 
-export default async function HomePage({ searchParams }: { searchParams: { code?: string } }) {
-  // DEBUG: Handle OAuth callback if code is present
-  if (searchParams.code) {
-    console.log('DEBUG: Received code on homepage:', searchParams.code);
-    // Redirect to the proper callback handler
-    return redirect(`/api/auth/callback?code=${searchParams.code}`);
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string | string[]; next?: string | string[] }>
+}) {
+  const { code, next } = await searchParams
+  const authCode = Array.isArray(code) ? code[0] : code
+
+  if (authCode) {
+    return redirect(buildAuthCallbackPath(authCode, next))
   }
 
   const supabase = await createSupabaseServerClient();
