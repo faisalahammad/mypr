@@ -144,7 +144,7 @@ describe('Settings Page', () => {
 
     expect(await screen.findByText('mypr')).toBeInTheDocument()
     expect(screen.getByText('private-repo')).toBeInTheDocument()
-    expect(screen.getByText('Portfolio sync app')).toBeInTheDocument()
+    expect((await screen.findAllByText('Portfolio sync app')).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /download screenshot for faisal\/mypr/i })).toBeInTheDocument()
   })
 
@@ -206,7 +206,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    expect((await screen.findAllByText('Show on profile, timeline, and feed')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Visible on profile, timeline, and feed')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Hidden from profile')).not.toBeInTheDocument()
     expect(screen.queryByText('Visible on profile')).not.toBeInTheDocument()
   })

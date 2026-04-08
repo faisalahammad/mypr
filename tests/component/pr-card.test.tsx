@@ -105,7 +105,7 @@ describe('PRCard', () => {
 
   it('renders GitHub link with correct href', () => {
     render(<PRCard pr={mockPR} />)
-    const link = screen.getByRole('link', { name: /view on github/i })
+    const link = screen.getByRole('link', { name: /fix critical bug in authentication/i })
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute('href', 'https://github.com/octocat/hello-world/pull/42')
     expect(link).toHaveAttribute('target', '_blank')
