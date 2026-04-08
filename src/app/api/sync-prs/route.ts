@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const serviceClient = createSupabaseServiceClient()
+    const serviceClient = createSupabaseServiceClient() as typeof supabase
     const now = new Date().toISOString()
     let totalSynced = 0
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       const { error: repoError } = await serviceClient
         .from('repositories')
-        .upsert(repoUpsertData, {
+        .upsert(repoUpsertData as never, {
           onConflict: 'user_id,repo_full_name',
           // Don't overwrite is_active - user controls that
           ignoreDuplicates: false,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
       const { error: prsError } = await serviceClient
         .from('pull_requests')
-        .upsert(prInsertData, {
+        .upsert(prInsertData as never, {
           onConflict: 'user_id,repo_full_name,pr_number',
         })
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
       await serviceClient
         .from('repositories')
-        .update({ pr_count: count ?? 0, last_synced_at: now })
+        .update(({ pr_count: count ?? 0, last_synced_at: now } as Database['public']['Tables']['repositories']['Update']) as never)
         .eq('user_id', session.user.id)
         .eq('repo_full_name', repo_full_name)
     }

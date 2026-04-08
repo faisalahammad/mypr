@@ -5,6 +5,7 @@ import type { NextRequest, NextResponse } from 'next/server'
 import { createClient as createBaseClient } from '@supabase/supabase-js'
 import { applySupabaseCookies } from './supabase-cookie-bridge'
 import { buildActiveRepoLookup, filterPRsByActiveRepos } from './repo-visibility'
+import type { PullRequestWithProfile } from '@/types'
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -140,6 +141,42 @@ export interface Database {
   }
 }
 
+type FeedProfile = Pick<
+  Database['public']['Tables']['profiles']['Row'],
+  'github_username' | 'github_avatar_url' | 'display_name'
+>
+
+type PRWithProfileRow = Database['public']['Tables']['pull_requests']['Row'] & {
+  profiles: FeedProfile | null
+}
+
+const hasFeedProfile = (pr: PRWithProfileRow): pr is Database['public']['Tables']['pull_requests']['Row'] & {
+  profiles: FeedProfile
+} => pr.profiles !== null
+
+const mapFeedPRs = (
+  prs: PRWithProfileRow[],
+  source: NonNullable<PullRequestWithProfile['source']>
+): PullRequestWithProfile[] =>
+  prs
+    .filter(hasFeedProfile)
+    .map((pr) => ({
+      id: pr.id,
+      user_id: pr.user_id,
+      repo_full_name: pr.repo_full_name,
+      pr_number: pr.pr_number,
+      title: pr.title,
+      body_summary: pr.body_summary,
+      pr_url: pr.pr_url,
+      merged_at: pr.merged_at,
+      additions: pr.additions,
+      deletions: pr.deletions,
+      commits_count: pr.commits_count,
+      synced_at: pr.synced_at,
+      source,
+      profile: pr.profiles,
+    }))
+
 // Server client for use in server components (reads cookies from next/headers)
 export const createSupabaseServerClient = async () => {
   const cookieStore = await cookies()
@@ -192,8 +229,8 @@ export const createSupabaseRouteHandlerClient = (
 }
 
 // Service role client (bypasses RLS, use with caution - server-only)
-export const createSupabaseServiceClient = () => {
-  const client = createBaseClient<Database>(
+export const createSupabaseServiceClient = (): ReturnType<typeof createSupabaseRouteHandlerClient> => {
+  return createBaseClient<Database>(
     supabaseUrl,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
@@ -202,8 +239,7 @@ export const createSupabaseServiceClient = () => {
         persistSession: false
       }
     }
-  )
-  return client
+  ) as ReturnType<typeof createSupabaseRouteHandlerClient>
 }
 
 // ============================================================================
@@ -303,11 +339,8 @@ export const getFollowedPRs = async (
   userId: string,
   limit = 20,
   offset = 0
-) => {
+) : Promise<PullRequestWithProfile[]> => {
   type FollowRow = Database['public']['Tables']['follows']['Row']
-  type PRWithProfileRow = Database['public']['Tables']['pull_requests']['Row'] & {
-    profiles: Database['public']['Tables']['profiles']['Row'] | null
-  }
 
   const supabase = await createSupabaseServerClient()
 
@@ -364,23 +397,7 @@ export const getFollowedPRs = async (
   const visiblePRs = filterPRsByActiveRepos(prs ?? [], activeRepoLookup)
     .slice(offset, offset + limit)
 
-  // Transform the data to match PullRequestWithProfile type
-  return (visiblePRs as PRWithProfileRow[]).map((pr) => ({
-    id: pr.id,
-    user_id: pr.user_id,
-    repo_full_name: pr.repo_full_name,
-    pr_number: pr.pr_number,
-    title: pr.title,
-    body_summary: pr.body_summary,
-    pr_url: pr.pr_url,
-    merged_at: pr.merged_at,
-    additions: pr.additions,
-    deletions: pr.deletions,
-    commits_count: pr.commits_count,
-    synced_at: pr.synced_at,
-    source: 'followed' as const,
-    profile: pr.profiles || null,
-  }))
+  return mapFeedPRs(visiblePRs as PRWithProfileRow[], 'followed')
 }
 
 const getFollowingIds = async (userId: string) => {
@@ -450,10 +467,6 @@ export const getSuggestedPRs = async (
   limit = 20,
   offset = 0
 ) => {
-  type PRWithProfileRow = Database['public']['Tables']['pull_requests']['Row'] & {
-    profiles: Database['public']['Tables']['profiles']['Row'] | null
-  }
-
   const supabase = await createSupabaseServerClient()
   const followingIds = await getFollowingIds(userId)
   const excludedIds = [userId, ...followingIds]
@@ -528,22 +541,7 @@ export const getSuggestedPRs = async (
   const visiblePRs = filterPRsByActiveRepos(prs, activeRepoLookup)
 
   return {
-    prs: (visiblePRs.slice(offset, offset + limit) as PRWithProfileRow[]).map((pr) => ({
-      id: pr.id,
-      user_id: pr.user_id,
-      repo_full_name: pr.repo_full_name,
-      pr_number: pr.pr_number,
-      title: pr.title,
-      body_summary: pr.body_summary,
-      pr_url: pr.pr_url,
-      merged_at: pr.merged_at,
-      additions: pr.additions,
-      deletions: pr.deletions,
-      commits_count: pr.commits_count,
-      synced_at: pr.synced_at,
-      source: 'suggested' as const,
-      profile: pr.profiles || null,
-    })),
+    prs: mapFeedPRs(visiblePRs.slice(offset, offset + limit) as PRWithProfileRow[], 'suggested'),
     hasMore: offset + limit < visiblePRs.length,
     total: visiblePRs.length,
   }

@@ -83,11 +83,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Only allow toggling repos that belong to this user (extra safety on top of RLS)
-    const serviceClient = createSupabaseServiceClient()
+    const serviceClient = createSupabaseServiceClient() as typeof supabase
 
     const { data, error } = await serviceClient
       .from('repositories')
-      .update({ is_active } as Database['public']['Tables']['repositories']['Update'])
+      .update(({ is_active } as Database['public']['Tables']['repositories']['Update']) as never)
       .eq('user_id', session.user.id)
       .eq('repo_full_name', repo_full_name)
       .select()

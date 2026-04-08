@@ -1,4 +1,4 @@
-import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
+import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
 import { getGitHubFollowing } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/lib/supabase'
@@ -46,17 +46,17 @@ export async function GET(request: NextRequest) {
   // Get the GitHub access token from the provider token
   const githubAccessToken = session.provider_token
 
-  // Use service role client to upsert user profile (bypasses RLS)
-  const serviceClient = createSupabaseServiceClient()
-  const { error: profileError } = await serviceClient
+  const profileRow = {
+    id: session.user.id,
+    github_username: githubUsername as string,
+    github_avatar_url: githubAvatar || null,
+    github_access_token: githubAccessToken || null,
+    display_name: (displayName || githubUsername) as string
+  } satisfies Database['public']['Tables']['profiles']['Insert']
+
+  const { error: profileError } = await supabase
     .from('profiles')
-    .upsert({
-      id: session.user.id,
-      github_username: githubUsername as string,
-      github_avatar_url: githubAvatar || null,
-      github_access_token: githubAccessToken || null,
-      display_name: (displayName || githubUsername) as string
-    } as Database['public']['Tables']['profiles']['Insert'], {
+    .upsert(profileRow as never, {
       onConflict: 'id'
     })
 
@@ -72,22 +72,24 @@ export async function GET(request: NextRequest) {
 
       if (githubFollowing.length > 0) {
         // Look up which of those usernames have profiles in our app
-        const { data: matchedProfiles } = await serviceClient
+        const { data: matchedProfiles } = await supabase
           .from('profiles')
           .select('id')
           .in('github_username', githubFollowing)
           .neq('id', session.user.id)
 
-        if (matchedProfiles && matchedProfiles.length > 0) {
-          const followRows = matchedProfiles.map((p: any) => ({
+        const typedMatchedProfiles = (matchedProfiles ?? []) as Array<Pick<Database['public']['Tables']['profiles']['Row'], 'id'>>
+
+        if (typedMatchedProfiles.length > 0) {
+          const followRows = typedMatchedProfiles.map((profile) => ({
             follower_id: session.user.id,
-            following_id: p.id,
-          }))
+            following_id: profile.id,
+          })) as Database['public']['Tables']['follows']['Insert'][]
 
           // Upsert — safe to call on every login, ignored on conflict
-          await serviceClient
+          await supabase
             .from('follows')
-            .upsert(followRows, { onConflict: 'follower_id,following_id' })
+            .upsert(followRows as never, { onConflict: 'follower_id,following_id' })
         }
       }
     } catch (followError) {
