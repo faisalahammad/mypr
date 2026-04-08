@@ -9,6 +9,7 @@ import Footer from '@/components/layout/Footer'
 import ScrollToTop from '@/components/ui/ScrollToTop'
 import { AppShell } from '@/components/layout/AppShell'
 import type { PullRequestWithProfile } from '@/types'
+import { buildActiveRepoLookup, filterPRsByActiveRepos } from '@/lib/repo-visibility'
 
 interface ProfilePageProps {
   params: Promise<{
@@ -47,26 +48,35 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }
 
   const supabase = await createSupabaseServerClient()
+  const { data: activeRepos } = await supabase
+    .from('repositories')
+    .select('user_id, repo_full_name')
+    .eq('user_id', typedProfile.id)
+    .eq('is_active', true)
+
   const { data: prs } = await supabase
     .from('pull_requests')
     .select('*')
     .eq('user_id', typedProfile.id)
     .order('merged_at', { ascending: false })
 
-  const typedPRs = (prs || []) as Array<{
-    id: string
-    user_id: string
-    repo_full_name: string
-    pr_number: number
-    title: string
-    body_summary: string | null
-    pr_url: string
-    merged_at: string
-    additions: number
-    deletions: number
-    commits_count: number
-    synced_at: string
-  }>
+  const typedPRs = filterPRsByActiveRepos(
+    ((prs || []) as Array<{
+      id: string
+      user_id: string
+      repo_full_name: string
+      pr_number: number
+      title: string
+      body_summary: string | null
+      pr_url: string
+      merged_at: string
+      additions: number
+      deletions: number
+      commits_count: number
+      synced_at: string
+    }>),
+    buildActiveRepoLookup((activeRepos ?? []) as Array<{ user_id: string; repo_full_name: string }>)
+  )
 
   const prsWithProfile: PullRequestWithProfile[] = typedPRs.map((pr) => ({
     ...pr,

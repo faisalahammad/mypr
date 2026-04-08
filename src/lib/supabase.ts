@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import type { NextRequest, NextResponse } from 'next/server'
 import { createClient as createBaseClient } from '@supabase/supabase-js'
 import { applySupabaseCookies } from './supabase-cookie-bridge'
+import { buildActiveRepoLookup, filterPRsByActiveRepos } from './repo-visibility'
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -202,9 +203,7 @@ export const createSupabaseServiceClient = () => {
       }
     }
   )
-
-  // Type assertion to ensure proper typing
-  return client as any
+  return client
 }
 
 // ============================================================================
@@ -305,6 +304,11 @@ export const getFollowedPRs = async (
   limit = 20,
   offset = 0
 ) => {
+  type FollowRow = Database['public']['Tables']['follows']['Row']
+  type PRWithProfileRow = Database['public']['Tables']['pull_requests']['Row'] & {
+    profiles: Database['public']['Tables']['profiles']['Row'] | null
+  }
+
   const supabase = await createSupabaseServerClient()
 
   // First, get the list of users that the current user follows
@@ -324,7 +328,8 @@ export const getFollowedPRs = async (
   }
 
   // Get the IDs of followed users
-  const followingIds = follows.map((f: any) => f.following_id)
+  const followingIds = (follows as FollowRow[]).map((follow) => follow.following_id)
+  const activeRepoLookup = await getActiveRepoLookupForUsers(followingIds)
 
   // Fetch PRs from followed users with their profile information
   const { data: prs, error: prsError } = await supabase
@@ -350,15 +355,17 @@ export const getFollowedPRs = async (
     `)
     .in('user_id', followingIds)
     .order('merged_at', { ascending: false })
-    .range(offset, offset + limit - 1)
 
   if (prsError) {
     console.error('Error fetching followed PRs:', prsError)
     return []
   }
 
+  const visiblePRs = filterPRsByActiveRepos(prs ?? [], activeRepoLookup)
+    .slice(offset, offset + limit)
+
   // Transform the data to match PullRequestWithProfile type
-  return prs.map((pr: any) => ({
+  return (visiblePRs as PRWithProfileRow[]).map((pr) => ({
     id: pr.id,
     user_id: pr.user_id,
     repo_full_name: pr.repo_full_name,
@@ -377,6 +384,8 @@ export const getFollowedPRs = async (
 }
 
 const getFollowingIds = async (userId: string) => {
+  type FollowRow = Database['public']['Tables']['follows']['Row']
+
   const supabase = await createSupabaseServerClient()
   const { data: follows, error } = await supabase
     .from('follows')
@@ -390,7 +399,7 @@ const getFollowingIds = async (userId: string) => {
     return []
   }
 
-  return follows.map((follow: any) => follow.following_id)
+  return (follows as FollowRow[]).map((follow) => follow.following_id)
 }
 
 const getFollowedPRCount = async (userId: string) => {
@@ -401,12 +410,39 @@ const getFollowedPRCount = async (userId: string) => {
     return 0
   }
 
-  const { count } = await supabase
+  const activeRepoLookup = await getActiveRepoLookupForUsers(followingIds)
+  const { data: prs, error } = await supabase
     .from('pull_requests')
-    .select('*', { count: 'exact', head: true })
+    .select('id, user_id, repo_full_name')
     .in('user_id', followingIds)
 
-  return count || 0
+  if (error) {
+    console.error('Error fetching followed PR count:', error)
+    return 0
+  }
+
+  return filterPRsByActiveRepos(prs ?? [], activeRepoLookup).length
+}
+
+const getActiveRepoLookupForUsers = async (userIds: string[]) => {
+  const supabase = await createSupabaseServerClient()
+
+  if (userIds.length === 0) {
+    return new Map<string, Set<string>>()
+  }
+
+  const { data: repos, error } = await supabase
+    .from('repositories')
+    .select('user_id, repo_full_name')
+    .in('user_id', userIds)
+    .eq('is_active', true)
+
+  if (error) {
+    console.error('Error fetching active repositories:', error)
+    return new Map<string, Set<string>>()
+  }
+
+  return buildActiveRepoLookup(repos ?? [])
 }
 
 export const getSuggestedPRs = async (
@@ -414,13 +450,17 @@ export const getSuggestedPRs = async (
   limit = 20,
   offset = 0
 ) => {
+  type PRWithProfileRow = Database['public']['Tables']['pull_requests']['Row'] & {
+    profiles: Database['public']['Tables']['profiles']['Row'] | null
+  }
+
   const supabase = await createSupabaseServerClient()
   const followingIds = await getFollowingIds(userId)
   const excludedIds = [userId, ...followingIds]
 
   const { data: candidateRepos, error: repoError } = await supabase
     .from('repositories')
-    .select('user_id, pr_count, last_synced_at')
+    .select('user_id, repo_full_name, pr_count, last_synced_at')
     .eq('is_active', true)
     .order('last_synced_at', { ascending: false })
     .order('pr_count', { ascending: false })
@@ -434,23 +474,27 @@ export const getSuggestedPRs = async (
 
   const typedCandidateRepos = (candidateRepos ?? []) as Array<{
     user_id: string
+    repo_full_name: string
     pr_count: number
     last_synced_at: string | null
   }>
 
-  const candidateIds = Array.from(
-    new Set(
-      typedCandidateRepos
-        .map((repo) => repo.user_id)
-        .filter((candidateId) => !excludedIds.includes(candidateId))
-    )
+  const activeRepoLookup = buildActiveRepoLookup(
+    typedCandidateRepos
+      .filter((repo) => !excludedIds.includes(repo.user_id))
+      .map((repo) => ({
+        user_id: repo.user_id,
+        repo_full_name: repo.repo_full_name,
+      }))
   )
+
+  const candidateIds = Array.from(activeRepoLookup.keys())
 
   if (candidateIds.length === 0) {
     return { prs: [], hasMore: false, total: 0 }
   }
 
-  const { data: prs, error: prsError, count } = await supabase
+  const { data: prs, error: prsError } = await supabase
     .from('pull_requests')
     .select(`
       id,
@@ -470,10 +514,9 @@ export const getSuggestedPRs = async (
         github_avatar_url,
         display_name
       )
-    `, { count: 'exact' })
+    `)
     .in('user_id', candidateIds)
     .order('merged_at', { ascending: false })
-    .range(offset, offset + limit - 1)
 
   if (prsError || !prs) {
     if (prsError) {
@@ -482,8 +525,10 @@ export const getSuggestedPRs = async (
     return { prs: [], hasMore: false, total: 0 }
   }
 
+  const visiblePRs = filterPRsByActiveRepos(prs, activeRepoLookup)
+
   return {
-    prs: prs.map((pr: any) => ({
+    prs: (visiblePRs.slice(offset, offset + limit) as PRWithProfileRow[]).map((pr) => ({
       id: pr.id,
       user_id: pr.user_id,
       repo_full_name: pr.repo_full_name,
@@ -499,8 +544,8 @@ export const getSuggestedPRs = async (
       source: 'suggested' as const,
       profile: pr.profiles || null,
     })),
-    hasMore: count !== null && offset + limit < count,
-    total: count || 0,
+    hasMore: offset + limit < visiblePRs.length,
+    total: visiblePRs.length,
   }
 }
 

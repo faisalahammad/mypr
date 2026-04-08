@@ -77,6 +77,12 @@ export interface GitHubPR extends GitHubPRListItem {
   commits: number
 }
 
+interface GitHubPRDetail {
+  additions?: number
+  deletions?: number
+  commits?: number
+}
+
 // Create authenticated Octokit instance
 export const createOctokit = (accessToken: string) => {
   return new Octokit({
@@ -179,11 +185,11 @@ export const getAllMergedPRs = async (
 }
 
 /**
- * Search for PRs that the user authored, that are merged AND approved.
+ * Search for PRs that the user authored and that were merged.
  * Uses GitHub's Search API — much more efficient than iterating over repos.
  * Returns structured PR data grouped by repository.
  */
-export interface ApprovedMergedPR {
+export interface MergedPR {
   pr_number: number
   title: string
   body: string | null
@@ -198,10 +204,10 @@ export interface ApprovedMergedPR {
 export interface RepoWithPRs {
   repo_full_name: string
   description: string | null
-  prs: ApprovedMergedPR[]
+  prs: MergedPR[]
 }
 
-export const searchApprovedMergedPRs = async (
+export const searchMergedPRs = async (
   accessToken: string,
   username: string,
   dateRange: DateRange
@@ -209,9 +215,8 @@ export const searchApprovedMergedPRs = async (
   const octokit = createOctokit(accessToken)
   const dateStart = getDateRangeStart(dateRange)
 
-  // Build query: authored by user, merged, approved by a reviewer
-  // GitHub search: review:approved means at least one approved review
-  let query = `type:pr author:${username} is:merged review:approved`
+  // Build query: authored by user and merged.
+  let query = `type:pr author:${username} is:merged`
   if (dateStart) {
     query += ` merged:>=${dateStart}`
   }
@@ -250,7 +255,7 @@ export const searchApprovedMergedPRs = async (
   // Fetch PR details (additions/deletions/commits) in parallel batches
   // We batch to avoid flooding the API
   const BATCH_SIZE = 10
-  const detailedPRs: ApprovedMergedPR[] = []
+  const detailedPRs: MergedPR[] = []
 
   for (let i = 0; i < mergedItems.length; i += BATCH_SIZE) {
     const batch = mergedItems.slice(i, i + BATCH_SIZE)
@@ -275,10 +280,10 @@ export const searchApprovedMergedPRs = async (
             html_url: item.html_url,
             merged_at: item.pull_request.merged_at!,
             repo_full_name: repoFullName,
-            additions: (prDetail as any).additions ?? 0,
-            deletions: (prDetail as any).deletions ?? 0,
-            commits: (prDetail as any).commits ?? 0,
-          } as ApprovedMergedPR
+            additions: (prDetail as GitHubPRDetail).additions ?? 0,
+            deletions: (prDetail as GitHubPRDetail).deletions ?? 0,
+            commits: (prDetail as GitHubPRDetail).commits ?? 0,
+          } as MergedPR
         } catch {
           // If detail fetch fails, still include the PR with 0 stats
           return {
@@ -291,7 +296,7 @@ export const searchApprovedMergedPRs = async (
             additions: 0,
             deletions: 0,
             commits: 0,
-          } as ApprovedMergedPR
+          } as MergedPR
         }
       })
     )
@@ -299,7 +304,7 @@ export const searchApprovedMergedPRs = async (
   }
 
   // Group by repository
-  const repoMap = new Map<string, ApprovedMergedPR[]>()
+  const repoMap = new Map<string, MergedPR[]>()
   for (const pr of detailedPRs) {
     if (!repoMap.has(pr.repo_full_name)) {
       repoMap.set(pr.repo_full_name, [])
@@ -365,7 +370,7 @@ export const validateToken = async (accessToken: string): Promise<boolean> => {
       }
     })
     return true
-  } catch (error) {
+  } catch {
     return false
   }
 }

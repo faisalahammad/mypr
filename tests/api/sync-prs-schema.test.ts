@@ -8,13 +8,15 @@ describe('Sync API Response Schemas', () => {
       const successResponse = {
         success: true,
         synced: 5,
-        message: 'Successfully synced 5 pull requests',
+        repos_found: 2,
+        message: 'Synced 5 merged PRs across 2 repos',
         prs: expect.any(Array)
       }
 
       expect(successResponse).toMatchObject({
         success: expect.any(Boolean),
         synced: expect.any(Number),
+        repos_found: expect.any(Number),
         message: expect.any(String)
       })
     })
@@ -23,12 +25,13 @@ describe('Sync API Response Schemas', () => {
       const response = {
         success: true,
         synced: 0,
-        message: 'No active repositories found',
-        prs: []
+        repos_found: 0,
+        message: 'No merged pull requests found for the selected time range.'
       }
 
       expect(response.synced).toBe(0)
-      expect(response.prs).toEqual([])
+      expect(response.repos_found).toBe(0)
+      expect(response.message).toContain('merged pull requests')
     })
   })
 

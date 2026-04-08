@@ -1,5 +1,5 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
-import { searchApprovedMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
+import { searchMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/lib/supabase'
 
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       // No body / invalid JSON - use default
     }
 
-    // Use the GitHub Search API to find all approved+merged PRs for the user
-    const reposWithPRs = await searchApprovedMergedPRs(
+    // Use the GitHub Search API to find all authored merged PRs for the user
+    const reposWithPRs = await searchMergedPRs(
       typedProfile.github_access_token,
       typedProfile.github_username,
       dateRange
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         success: true,
         synced: 0,
         repos_found: 0,
-        message: 'No approved merged pull requests found for the selected time range.',
+        message: 'No merged pull requests found for the selected time range.',
       })
     }
 
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       success: true,
       synced: totalSynced,
       repos_found: reposWithPRs.length,
-      message: `Synced ${totalSynced} approved PR${totalSynced !== 1 ? 's' : ''} across ${reposWithPRs.length} repo${reposWithPRs.length !== 1 ? 's' : ''}`,
+      message: `Synced ${totalSynced} merged PR${totalSynced !== 1 ? 's' : ''} across ${reposWithPRs.length} repo${reposWithPRs.length !== 1 ? 's' : ''}`,
     })
 
   } catch (error) {

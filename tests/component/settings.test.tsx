@@ -3,6 +3,13 @@ import userEvent from '@testing-library/user-event'
 
 import SettingsPage from '@/app/(app)/settings/page'
 
+const mockDownloadAsImage = jest.fn()
+
+jest.mock('@/lib/utils', () => ({
+  cn: (...inputs: Array<string | false | null | undefined>) => inputs.filter(Boolean).join(' '),
+  downloadAsImage: (...args: unknown[]) => mockDownloadAsImage(...args),
+}))
+
 global.fetch = jest.fn()
 
 const mockRepos = [
@@ -138,6 +145,7 @@ describe('Settings Page', () => {
     expect(await screen.findByText('mypr')).toBeInTheDocument()
     expect(screen.getByText('private-repo')).toBeInTheDocument()
     expect(screen.getByText('Portfolio sync app')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /download screenshot for faisal\/mypr/i })).toBeInTheDocument()
   })
 
   it('shows the active and total repository count from fetched repos', async () => {
@@ -191,6 +199,34 @@ describe('Settings Page', () => {
     await waitFor(() => {
       expect(screen.getByText('2 active / 2 total')).toBeInTheDocument()
     })
+  })
+
+  it('uses public visibility copy instead of hidden-from-profile copy', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    expect((await screen.findAllByText('Show on profile, timeline, and feed')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Hidden from profile')).not.toBeInTheDocument()
+    expect(screen.queryByText('Visible on profile')).not.toBeInTheDocument()
+  })
+
+  it('downloads a screenshot for a specific repository card', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    const button = await screen.findByRole('button', { name: /download screenshot for faisal\/mypr/i })
+    fireEvent.click(button)
+
+    await waitFor(() => {
+      expect(mockDownloadAsImage).toHaveBeenCalledTimes(1)
+    })
+
+    expect(mockDownloadAsImage).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      'repo-faisal-mypr.png'
+    )
   })
 
   it('rolls back repository state when a toggle request fails', async () => {
