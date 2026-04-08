@@ -6,24 +6,18 @@ global.fetch = jest.fn()
 
 const mockRepos = [
   {
-    id: 1,
-    name: 'mypr',
-    full_name: 'faisal/mypr',
+    repo_full_name: 'faisal/mypr',
     description: 'Portfolio sync app',
-    language: 'TypeScript',
-    stargazers_count: 12,
-    visibility: 'public',
     is_active: true,
+    pr_count: 8,
+    last_synced_at: '2026-04-08T10:00:00.000Z',
   },
   {
-    id: 2,
-    name: 'private-repo',
-    full_name: 'faisal/private-repo',
+    repo_full_name: 'faisal/private-repo',
     description: null,
-    language: null,
-    stargazers_count: 0,
-    visibility: 'private',
     is_active: false,
+    pr_count: 2,
+    last_synced_at: '2026-04-08T10:00:00.000Z',
   },
 ]
 
@@ -37,11 +31,13 @@ function mockInitialFetch({
   syncInfo = mockSyncInfo,
   reposOk = true,
   toggleOk = true,
+  syncOk = true,
 }: {
   repos?: typeof mockRepos
   syncInfo?: typeof mockSyncInfo
   reposOk?: boolean
   toggleOk?: boolean
+  syncOk?: boolean
 } = {}) {
   let currentRepos = repos.map((repo) => ({ ...repo }))
 
@@ -53,7 +49,7 @@ function mockInitialFetch({
 
       if (toggleOk) {
         currentRepos = currentRepos.map((repo) =>
-          repo.full_name === body.repo_full_name
+          repo.repo_full_name === body.repo_full_name
             ? { ...repo, is_active: body.is_active }
             : repo
         )
@@ -91,8 +87,27 @@ function mockInitialFetch({
               }
             : {
                 success: false,
-                error: 'GitHub fetch failed',
                 message: 'Unable to load repositories',
+              }
+        ),
+      })
+    }
+
+    if (url === '/api/sync-prs' && init?.method === 'POST') {
+      return Promise.resolve({
+        ok: syncOk,
+        json: jest.fn().mockResolvedValue(
+          syncOk
+            ? {
+                success: true,
+                synced: 10,
+                repos_found: 2,
+                message: 'Synced 10 approved PRs across 2 repos',
+              }
+            : {
+                success: false,
+                error: 'Sync failed',
+                message: 'Failed to sync PRs',
               }
         ),
       })
@@ -114,22 +129,22 @@ describe('Settings Page', () => {
     jest.clearAllMocks()
   })
 
-  it('renders repository rows from /api/repos and removes the phase 5 placeholder copy', async () => {
+  it('renders cached repositories from /api/repos', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
-    expect(await screen.findByText('faisal/mypr')).toBeInTheDocument()
-    expect(screen.getByText('faisal/private-repo')).toBeInTheDocument()
-    expect(screen.queryByText(/coming soon in phase 5/i)).not.toBeInTheDocument()
+    expect(await screen.findByText('mypr')).toBeInTheDocument()
+    expect(screen.getByText('private-repo')).toBeInTheDocument()
+    expect(screen.getByText('Portfolio sync app')).toBeInTheDocument()
   })
 
-  it('shows the active repository count from fetched repos', async () => {
+  it('shows the active and total repository count from fetched repos', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
-    expect(await screen.findByText(/1 active of 2 repositories/i)).toBeInTheDocument()
+    expect(await screen.findByText('1 active / 2 total')).toBeInTheDocument()
   })
 
   it('shows an actionable repositories error state when repo loading fails', async () => {
@@ -137,23 +152,30 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    expect(await screen.findByRole('button', { name: /retry loading repositories/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /retry loading repositories/i })).toBeInTheDocument()
+    expect((await screen.findAllByText('Unable to load repositories')).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 
-  it('disables sync when there are no active repositories', async () => {
-    mockInitialFetch({
-      repos: mockRepos.map((repo) => ({ ...repo, is_active: false })),
-    })
+  it('posts the selected date range during sync', async () => {
+    mockInitialFetch()
 
     render(<SettingsPage />)
 
-    expect(await screen.findByText(/0 active of 2 repositories/i)).toBeInTheDocument()
+    await screen.findByText('mypr')
 
-    const syncButton = await screen.findByRole('button', { name: /sync prs/i })
+    fireEvent.click(screen.getByRole('button', { name: /last 3 months/i }))
+    fireEvent.click(screen.getByRole('button', { name: /last 6 months/i }))
+    fireEvent.click(screen.getByRole('button', { name: /sync prs/i }))
 
-    expect(syncButton).toBeDisabled()
-    expect(screen.getByText(/activate at least one repository to enable syncing/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/sync-prs',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ dateRange: '6m' }),
+        })
+      )
+    })
   })
 
   it('optimistically toggles a repository and updates the active count', async () => {
@@ -166,7 +188,7 @@ describe('Settings Page', () => {
     fireEvent.click(toggle)
 
     await waitFor(() => {
-      expect(screen.getByText(/2 active of 2 repositories/i)).toBeInTheDocument()
+      expect(screen.getByText('2 active / 2 total')).toBeInTheDocument()
     })
   })
 
@@ -183,6 +205,6 @@ describe('Settings Page', () => {
       expect(screen.getByText(/failed to update repository/i)).toBeInTheDocument()
     })
 
-    expect(screen.getByText(/1 active of 2 repositories/i)).toBeInTheDocument()
+    expect(screen.getByText('1 active / 2 total')).toBeInTheDocument()
   })
 })

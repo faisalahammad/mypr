@@ -1,11 +1,10 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
-import { getUserRepos, type GitHubRepo } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/lib/supabase'
 
+// GET — return repositories from our local Supabase cache (no GitHub API call)
 export async function GET(request: NextRequest) {
   try {
-    // Get session from cookie
     const supabase = createSupabaseRouteHandlerClient(request)
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -16,76 +15,36 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get user profile with GitHub username
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('github_username, github_access_token')
-      .eq('id', session.user.id)
-      .single()
-
-    type ProfileType = {
-      github_username: string
-      github_access_token: string
-    }
-
-    const typedProfile = profile as ProfileType | null
-
-    if (profileError || !typedProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found', message: 'User profile not found' },
-        { status: 404 }
-      )
-    }
-
-    if (!typedProfile.github_access_token) {
-      return NextResponse.json(
-        { success: false, error: 'No GitHub token', message: 'GitHub access token not found' },
-        { status: 400 }
-      )
-    }
-
-    // Fetch repositories from GitHub
-    const githubRepos = await getUserRepos(
-      typedProfile.github_access_token,
-      typedProfile.github_username
-    )
-
-    // Fetch active repositories from database
-    const { data: activeRepos, error: activeReposError } = await supabase
+    // Fetch repos from our cache — only repos that have been discovered via sync
+    const { data: repos, error: reposError } = await supabase
       .from('repositories')
-      .select('repo_full_name, is_active')
+      .select('repo_full_name, description, is_active, pr_count, last_synced_at, created_at')
       .eq('user_id', session.user.id)
+      .order('pr_count', { ascending: false })
 
-    if (activeReposError) {
-      console.error('Error fetching active repos:', activeReposError)
+    if (reposError) {
+      return NextResponse.json(
+        { success: false, error: 'Database error', message: reposError.message },
+        { status: 500 }
+      )
     }
 
-    type ActiveRepoType = {
+    const typedRepos = (repos ?? []) as Array<{
       repo_full_name: string
+      description: string | null
       is_active: boolean
-    }
+      pr_count: number
+      last_synced_at: string | null
+      created_at: string
+    }>
 
-    const typedActiveRepos = activeRepos as ActiveRepoType[] | null
-
-    // Create a map of active repos
-    const activeRepoMap = new Map<string, boolean>()
-    typedActiveRepos?.forEach(repo => {
-      activeRepoMap.set(repo.repo_full_name, repo.is_active)
-    })
-
-    // Merge GitHub repos with database active status
-    const repos = githubRepos.map(repo => ({
-      ...repo,
-      is_active: activeRepoMap.get(repo.full_name) || false
-    }))
-
-    const activeCount = repos.filter(r => r.is_active).length
+    const activeCount = typedRepos.filter(r => r.is_active).length
 
     return NextResponse.json({
       success: true,
-      repos,
-      total_count: repos.length,
-      active_count: activeCount
+      repos: typedRepos,
+      total_count: typedRepos.length,
+      active_count: activeCount,
     })
   } catch (error) {
     console.error('Error in GET /api/repos:', error)
@@ -100,6 +59,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST — toggle a repository's is_active status
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseRouteHandlerClient(request)
@@ -122,25 +82,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upsert repository using service role client
+    // Only allow toggling repos that belong to this user (extra safety on top of RLS)
     const serviceClient = createSupabaseServiceClient()
-
-    const repoData = {
-      user_id: session.user.id,
-      repo_full_name,
-      is_active
-    } as Database['public']['Tables']['repositories']['Insert']
 
     const { data, error } = await serviceClient
       .from('repositories')
-      .upsert(repoData, {
-        onConflict: 'user_id,repo_full_name'
-      })
+      .update({ is_active } as Database['public']['Tables']['repositories']['Update'])
+      .eq('user_id', session.user.id)
+      .eq('repo_full_name', repo_full_name)
       .select()
       .single()
 
     if (error) {
-      console.error('Error upserting repository:', error)
+      console.error('Error updating repository:', error)
       return NextResponse.json(
         { success: false, error: 'Database error', message: error.message },
         { status: 500 }

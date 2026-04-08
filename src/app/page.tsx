@@ -4,6 +4,9 @@ import { buildAuthCallbackPath } from "@/lib/auth-redirect";
 import { GitHubLoginButton } from "@/components/auth/GitHubLoginButton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import ScrollToTop from "@/components/ui/ScrollToTop";
 import {
   Activity,
   BookOpen,
@@ -18,7 +21,6 @@ import {
   Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import FloatingNav from "@/components/home/FloatingNav";
 import AnimatedTimeline from "@/components/home/AnimatedTimeline";
 import { FadeUp } from "@/components/home/FadeUp";
 
@@ -199,7 +201,7 @@ export default async function HomePage({
 
   return (
     <>
-      <FloatingNav />
+      <Header isLandingPage />
 
       <main className="overflow-x-hidden bg-background text-foreground">
 
@@ -299,7 +301,7 @@ export default async function HomePage({
         <MarqueeStrip />
 
         {/* ── Stats ─────────────────────────────────────────────────────────── */}
-        <section className="border-b border-border py-20">
+        <section id="features" className="border-b border-border py-20">
           <div className="mx-auto max-w-6xl px-6">
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
               {[
@@ -333,7 +335,7 @@ export default async function HomePage({
         </section>
 
         {/* ── Who Is It For ─────────────────────────────────────────────────── */}
-        <section className="border-b border-border py-28">
+        <section id="how-it-works" className="border-b border-border py-28">
           <div className="mx-auto max-w-6xl px-6">
             <FadeUp>
               <div className="mb-16 text-center">
@@ -471,7 +473,7 @@ export default async function HomePage({
         </section>
 
         {/* ── Screenshot Download Demo ──────────────────────────────────────── */}
-        <section className="py-28 bg-secondary/80 relative overflow-hidden">
+        <section id="share" className="py-28 bg-secondary/80 relative overflow-hidden">
           {/* Decorative blobs */}
           <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
             <div className="absolute top-20 right-10 w-60 h-60 rounded-full bg-[hsl(262,83%,58%,0.05)] blur-3xl" />
@@ -549,27 +551,10 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* ── Footer ────────────────────────────────────────────────────────── */}
-        <footer className="border-t border-border bg-muted/40 py-8">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-            <div className="flex flex-col gap-1">
-              <LogoMark />
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
-                Built for open source contributors. Hosted on Vercel.
-              </p>
-            </div>
-            <a
-              href="https://github.com/faisalahammad/mypr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="GitHub repository"
-            >
-              <GitHubIcon className="h-5 w-5" />
-            </a>
-          </div>
-        </footer>
       </main>
+
+      <Footer isLandingPage />
+      <ScrollToTop />
     </>
   );
 }

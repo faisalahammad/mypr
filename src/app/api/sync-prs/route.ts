@@ -1,5 +1,5 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
-import { getAllMergedPRs, getPRSummary } from '@/lib/github'
+import { searchApprovedMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/lib/supabase'
 
@@ -44,84 +44,113 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get active repositories
-    const { data: repositories, error: reposError } = await supabase
-      .from('repositories')
-      .select('repo_full_name')
-      .eq('user_id', session.user.id)
-      .eq('is_active', true)
-
-    if (reposError) {
-      return NextResponse.json(
-        { error: 'Failed to fetch repositories', message: reposError.message },
-        { status: 500 }
-      )
+    // Get date range from request body (default to 3 months if not provided)
+    let dateRange: DateRange = '3m'
+    try {
+      const body = await request.json()
+      if (body?.dateRange) {
+        dateRange = body.dateRange as DateRange
+      }
+    } catch {
+      // No body / invalid JSON - use default
     }
 
-    type RepoType = {
-      repo_full_name: string
-    }
-
-    if (!repositories || repositories.length === 0) {
-      return NextResponse.json(
-        { success: true, synced: 0, message: 'No active repositories found. Add repositories in settings first.' },
-        { status: 200 }
-      )
-    }
-
-    // Fetch PRs from GitHub
-    const repoFullNames = (repositories as RepoType[]).map(r => r.repo_full_name)
-    const gitHubPRs = await getAllMergedPRs(
-      typedProfile.github_access_token!,
-      repoFullNames,
-      typedProfile.github_username
+    // Use the GitHub Search API to find all approved+merged PRs for the user
+    const reposWithPRs = await searchApprovedMergedPRs(
+      typedProfile.github_access_token,
+      typedProfile.github_username,
+      dateRange
     )
 
-    if (gitHubPRs.length === 0) {
-      return NextResponse.json(
-        { success: true, synced: 0, message: 'No merged pull requests found in your active repositories.' },
-        { status: 200 }
-      )
+    if (reposWithPRs.length === 0) {
+      return NextResponse.json({
+        success: true,
+        synced: 0,
+        repos_found: 0,
+        message: 'No approved merged pull requests found for the selected time range.',
+      })
     }
 
-    // Use service role client to bypass RLS for upsert
     const serviceClient = createSupabaseServiceClient()
+    const now = new Date().toISOString()
+    let totalSynced = 0
 
-    // Prepare PR data for upsert
-    const prData = gitHubPRs.map(pr => ({
-      user_id: session.user.id,
-      repo_full_name: pr.base.repo.full_name,
-      pr_number: pr.number,
-      title: pr.title,
-      body_summary: getPRSummary(pr.body),
-      pr_url: pr.html_url,
-      merged_at: pr.merged_at!,
-      additions: pr.additions,
-      deletions: pr.deletions,
-      commits_count: pr.commits
-    } as Database['public']['Tables']['pull_requests']['Insert']))
+    for (const repoData of reposWithPRs) {
+      const { repo_full_name, description, prs } = repoData
 
-    // Upsert PRs
-    const { data: upsertedPRs, error: upsertError } = await serviceClient
-      .from('pull_requests')
-      .upsert(prData, {
-        onConflict: 'user_id,repo_full_name,pr_number'
-      })
-      .select()
+      // Upsert the repository into our cache with description and PR count
+      const repoUpsertData = {
+        user_id: session.user.id,
+        repo_full_name,
+        description,
+        pr_count: prs.length,
+        last_synced_at: now,
+        // Keep is_active as false by default (user decides to include in profile)
+        is_active: false,
+      } as Database['public']['Tables']['repositories']['Insert']
 
-    if (upsertError) {
-      console.error('Error upserting PRs:', upsertError)
-      return NextResponse.json(
-        { error: 'Failed to sync PRs', message: upsertError.message },
-        { status: 500 }
-      )
+      const { error: repoError } = await serviceClient
+        .from('repositories')
+        .upsert(repoUpsertData, {
+          onConflict: 'user_id,repo_full_name',
+          // Don't overwrite is_active - user controls that
+          ignoreDuplicates: false,
+        })
+
+      if (repoError) {
+        console.error(`Error upserting repository ${repo_full_name}:`, repoError)
+        continue
+      }
+
+      // Upsert all PRs for this repository
+      const prInsertData = prs.map(pr => ({
+        user_id: session.user.id,
+        repo_full_name: pr.repo_full_name,
+        pr_number: pr.pr_number,
+        title: pr.title,
+        body_summary: getPRSummary(pr.body),
+        pr_url: pr.html_url,
+        merged_at: pr.merged_at,
+        additions: pr.additions,
+        deletions: pr.deletions,
+        commits_count: pr.commits,
+        is_approved: true,
+        synced_at: now,
+      } as Database['public']['Tables']['pull_requests']['Insert']))
+
+      const { error: prsError } = await serviceClient
+        .from('pull_requests')
+        .upsert(prInsertData, {
+          onConflict: 'user_id,repo_full_name,pr_number',
+        })
+
+      if (prsError) {
+        console.error(`Error upserting PRs for ${repo_full_name}:`, prsError)
+      } else {
+        totalSynced += prs.length
+      }
+    }
+
+    // Update pr_count for each repo from the database (ensures accuracy after upsert)
+    for (const { repo_full_name } of reposWithPRs) {
+      const { count } = await serviceClient
+        .from('pull_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('repo_full_name', repo_full_name)
+
+      await serviceClient
+        .from('repositories')
+        .update({ pr_count: count ?? 0, last_synced_at: now })
+        .eq('user_id', session.user.id)
+        .eq('repo_full_name', repo_full_name)
     }
 
     return NextResponse.json({
       success: true,
-      synced: prData.length,
-      message: `Successfully synced ${prData.length} pull request${prData.length !== 1 ? 's' : ''}`,
-      prs: upsertedPRs
+      synced: totalSynced,
+      repos_found: reposWithPRs.length,
+      message: `Synced ${totalSynced} approved PR${totalSynced !== 1 ? 's' : ''} across ${reposWithPRs.length} repo${reposWithPRs.length !== 1 ? 's' : ''}`,
     })
 
   } catch (error) {
@@ -149,24 +178,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get latest sync timestamp
-    const { data: prs, error } = await supabase
-      .from('pull_requests')
-      .select('synced_at')
+    // Get latest sync timestamp from repositories
+    const { data: repos } = await supabase
+      .from('repositories')
+      .select('last_synced_at')
       .eq('user_id', session.user.id)
-      .order('synced_at', { ascending: false })
+      .not('last_synced_at', 'is', null)
+      .order('last_synced_at', { ascending: false })
       .limit(1)
-
-    type PRType = {
-      synced_at: string
-    }
-
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to fetch sync status' },
-        { status: 500 }
-      )
-    }
 
     // Get total PR count
     const { count } = await supabase
@@ -174,8 +193,11 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', session.user.id)
 
+    const typedRepos = (repos ?? []) as Array<{ last_synced_at: string | null }>
+    const lastSynced = typedRepos.length > 0 ? typedRepos[0].last_synced_at : null
+
     return NextResponse.json({
-      last_synced: prs && prs.length > 0 ? (prs as PRType[])[0].synced_at : null,
+      last_synced: lastSynced,
       total_prs: count || 0
     })
 

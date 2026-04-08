@@ -61,21 +61,30 @@ export interface Database {
           id: string
           user_id: string
           repo_full_name: string
+          description: string | null
           is_active: boolean
+          pr_count: number
+          last_synced_at: string | null
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
           repo_full_name: string
+          description?: string | null
           is_active?: boolean
+          pr_count?: number
+          last_synced_at?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           repo_full_name?: string
+          description?: string | null
           is_active?: boolean
+          pr_count?: number
+          last_synced_at?: string | null
           created_at?: string
         }
       }
@@ -92,6 +101,7 @@ export interface Database {
           additions: number
           deletions: number
           commits_count: number
+          is_approved: boolean
           synced_at: string
         }
         Insert: {
@@ -106,6 +116,7 @@ export interface Database {
           additions?: number
           deletions?: number
           commits_count?: number
+          is_approved?: boolean
           synced_at?: string
         }
         Update: {
@@ -120,6 +131,7 @@ export interface Database {
           additions?: number
           deletions?: number
           commits_count?: number
+          is_approved?: boolean
           synced_at?: string
         }
       }

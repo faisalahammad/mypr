@@ -20,6 +20,34 @@ export interface GitHubRepo {
   visibility: string
   updated_at: string
   is_active?: boolean
+  pr_count?: number
+}
+
+export type DateRange = '1m' | '3m' | '6m' | '12m' | '24m' | 'lifetime'
+
+export const getDateRangeStart = (range: DateRange): string | null => {
+  if (range === 'lifetime') return null
+  const months = { '1m': 1, '3m': 3, '6m': 6, '12m': 12, '24m': 24 }[range]
+  const date = new Date()
+  date.setMonth(date.getMonth() - months)
+  return date.toISOString().split('T')[0] // YYYY-MM-DD format
+}
+
+// Represents a PR returned from GitHub's search API
+export interface GitHubSearchPR {
+  number: number
+  title: string
+  body: string | null
+  html_url: string
+  pull_request: {
+    merged_at: string | null
+  }
+  repository_url: string
+  state: string
+  user: {
+    login: string
+    avatar_url: string
+  }
 }
 
 export interface GitHubPRListItem {
@@ -126,7 +154,7 @@ export const getPRSummary = (body: string | null): string => {
   return body.substring(0, 150) + (body.length > 150 ? '...' : '')
 }
 
-// Fetch all merged PRs across multiple repositories
+// Fetch all merged PRs across multiple repositories (used for legacy/fallback)
 export const getAllMergedPRs = async (
   accessToken: string,
   repos: string[],
@@ -148,6 +176,162 @@ export const getAllMergedPRs = async (
   return allPRs.sort((a, b) =>
     new Date(b.merged_at!).getTime() - new Date(a.merged_at!).getTime()
   )
+}
+
+/**
+ * Search for PRs that the user authored, that are merged AND approved.
+ * Uses GitHub's Search API — much more efficient than iterating over repos.
+ * Returns structured PR data grouped by repository.
+ */
+export interface ApprovedMergedPR {
+  pr_number: number
+  title: string
+  body: string | null
+  html_url: string
+  merged_at: string
+  repo_full_name: string
+  additions: number
+  deletions: number
+  commits: number
+}
+
+export interface RepoWithPRs {
+  repo_full_name: string
+  description: string | null
+  prs: ApprovedMergedPR[]
+}
+
+export const searchApprovedMergedPRs = async (
+  accessToken: string,
+  username: string,
+  dateRange: DateRange
+): Promise<RepoWithPRs[]> => {
+  const octokit = createOctokit(accessToken)
+  const dateStart = getDateRangeStart(dateRange)
+
+  // Build query: authored by user, merged, approved by a reviewer
+  // GitHub search: review:approved means at least one approved review
+  let query = `type:pr author:${username} is:merged review:approved`
+  if (dateStart) {
+    query += ` merged:>=${dateStart}`
+  }
+
+  const allItems: GitHubSearchPR[] = []
+  let page = 1
+  const perPage = 100
+
+  // Paginate through all results (GitHub search API returns max 1000 results)
+  while (true) {
+    const { data } = await octokit.request('GET /search/issues', {
+      q: query,
+      sort: 'updated',
+      order: 'desc',
+      per_page: perPage,
+      page,
+      headers: { 'X-GitHub-Api-Version': '2022-11-28' }
+    })
+
+    const items = data.items as GitHubSearchPR[]
+    allItems.push(...items)
+
+    if (items.length < perPage) break
+    page++
+    // GitHub enforces a 1000-result cap on search
+    if (page * perPage >= 1000) break
+  }
+
+  // Filter to only truly merged PRs (search returns closed too sometimes)
+  const mergedItems = allItems.filter(item => item.pull_request?.merged_at)
+
+  // Extract repo full name from repository_url
+  // e.g. https://api.github.com/repos/owner/repo → owner/repo
+  const extractRepoName = (url: string) => url.replace('https://api.github.com/repos/', '')
+
+  // Fetch PR details (additions/deletions/commits) in parallel batches
+  // We batch to avoid flooding the API
+  const BATCH_SIZE = 10
+  const detailedPRs: ApprovedMergedPR[] = []
+
+  for (let i = 0; i < mergedItems.length; i += BATCH_SIZE) {
+    const batch = mergedItems.slice(i, i + BATCH_SIZE)
+    const batchResults = await Promise.all(
+      batch.map(async (item) => {
+        const repoFullName = extractRepoName(item.repository_url)
+        const [owner, repo] = repoFullName.split('/')
+        try {
+          const { data: prDetail } = await octokit.request(
+            'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+            {
+              owner,
+              repo,
+              pull_number: item.number,
+              headers: { 'X-GitHub-Api-Version': '2022-11-28' }
+            }
+          )
+          return {
+            pr_number: item.number,
+            title: item.title,
+            body: item.body,
+            html_url: item.html_url,
+            merged_at: item.pull_request.merged_at!,
+            repo_full_name: repoFullName,
+            additions: (prDetail as any).additions ?? 0,
+            deletions: (prDetail as any).deletions ?? 0,
+            commits: (prDetail as any).commits ?? 0,
+          } as ApprovedMergedPR
+        } catch {
+          // If detail fetch fails, still include the PR with 0 stats
+          return {
+            pr_number: item.number,
+            title: item.title,
+            body: item.body,
+            html_url: item.html_url,
+            merged_at: item.pull_request.merged_at!,
+            repo_full_name: repoFullName,
+            additions: 0,
+            deletions: 0,
+            commits: 0,
+          } as ApprovedMergedPR
+        }
+      })
+    )
+    detailedPRs.push(...batchResults)
+  }
+
+  // Group by repository
+  const repoMap = new Map<string, ApprovedMergedPR[]>()
+  for (const pr of detailedPRs) {
+    if (!repoMap.has(pr.repo_full_name)) {
+      repoMap.set(pr.repo_full_name, [])
+    }
+    repoMap.get(pr.repo_full_name)!.push(pr)
+  }
+
+  const reposWithMetadata = await Promise.all(
+    Array.from(repoMap.entries()).map(async ([repo_full_name, prs]) => {
+      const [owner, repo] = repo_full_name.split('/')
+      let description: string | null = null
+
+      try {
+        const { data: repoData } = await octokit.request('GET /repos/{owner}/{repo}', {
+          owner,
+          repo,
+          headers: { 'X-GitHub-Api-Version': '2022-11-28' }
+        })
+        description = (repoData as { description?: string | null }).description ?? null
+      } catch {
+        description = null
+      }
+
+      return {
+        repo_full_name,
+        description,
+        prs: prs.sort((a, b) => new Date(b.merged_at).getTime() - new Date(a.merged_at).getTime())
+      } as RepoWithPRs
+    })
+  )
+
+  return reposWithMetadata
 }
 
 // Fetch users that the authenticated user is following on GitHub
