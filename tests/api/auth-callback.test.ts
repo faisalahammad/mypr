@@ -36,6 +36,12 @@ describe('GET /api/auth/callback', () => {
           error: null,
         }),
       },
+      from: jest.fn().mockReturnValue({
+        upsert: jest.fn().mockResolvedValue({ error: null }),
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
     })
 
     ;(createSupabaseServiceClient as jest.Mock).mockReturnValue({
