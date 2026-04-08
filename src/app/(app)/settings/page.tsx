@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Clock3,
   Database,
-  Download,
   Eye,
   GitPullRequest,
   RefreshCw,
@@ -21,7 +20,6 @@ import { Switch } from '@/components/ui/switch'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppShell } from '@/components/layout/AppShell'
 import type { DateRange } from '@/lib/github'
-import { downloadAsImage } from '@/lib/utils'
 
 const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: '1m', label: 'Last 1 month' },
@@ -95,11 +93,9 @@ export default function SettingsPage() {
   const [repoError, setRepoError] = useState<string | null>(null)
   const [repoUpdateError, setRepoUpdateError] = useState<string | null>(null)
   const [pendingRepos, setPendingRepos] = useState<Record<string, boolean>>({})
-  const [downloadingRepos, setDownloadingRepos] = useState<Record<string, boolean>>({})
   const [dateRange, setDateRange] = useState<DateRange>('3m')
   const [showDateDropdown, setShowDateDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const previewRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const selectedRange = DATE_RANGE_OPTIONS.find((option) => option.value === dateRange) ?? DATE_RANGE_OPTIONS[1]
 
   const persistedRangeLabel = getRangeLabel(syncInfo?.last_date_range ?? null)
@@ -202,18 +198,6 @@ export default function SettingsPage() {
       })
     } finally {
       setIsSyncing(false)
-    }
-  }
-
-  const handleRepoScreenshot = async (repoFullName: string) => {
-    const previewEl = previewRefs.current[repoFullName]
-    if (!previewEl || downloadingRepos[repoFullName]) return
-
-    setDownloadingRepos((current) => ({ ...current, [repoFullName]: true }))
-    try {
-      await downloadAsImage(previewEl, `repo-${repoFullName.replace('/', '-')}.png`)
-    } finally {
-      setDownloadingRepos((current) => ({ ...current, [repoFullName]: false }))
     }
   }
 
@@ -464,7 +448,6 @@ export default function SettingsPage() {
                 {sortedRepos.map((repo) => {
                   const [owner, name] = repo.repo_full_name.split('/')
                   const isPending = pendingRepos[repo.repo_full_name]
-                  const isDownloading = downloadingRepos[repo.repo_full_name]
 
                   return (
                     <div
@@ -522,52 +505,9 @@ export default function SettingsPage() {
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs text-muted-foreground">
-                            {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Hidden from public profile — toggle to show'}
-                          </p>
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRepoScreenshot(repo.repo_full_name)}
-                            disabled={isDownloading}
-                            aria-label={`Download screenshot for ${repo.repo_full_name}`}
-                            className="shrink-0"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            {isDownloading ? 'Saving…' : 'Screenshot'}
-                          </Button>
-                        </div>
-
-                        <div
-                          ref={(el) => { previewRefs.current[repo.repo_full_name] = el }}
-                          className="hidden"
-                        >
-                          <div className="w-[600px] rounded-2xl border border-border bg-white p-6 shadow-lg">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage src={repo.owner_avatar_url ?? undefined} alt={owner} />
-                                <AvatarFallback>{owner.slice(0, 2).toUpperCase()}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-lg font-bold text-foreground">{repo.repo_full_name}</p>
-                                <p className="text-sm text-muted-foreground">{repo.description || ''}</p>
-                              </div>
-                            </div>
-                            <div className="mt-4 flex items-center gap-4">
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
-                                <GitPullRequest className="h-4 w-4" />
-                                {repo.pr_count} merged PR{repo.pr_count !== 1 ? 's' : ''}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                Synced {formatDate(repo.last_synced_at)}
-                              </span>
-                            </div>
-                            <p className="mt-4 text-xs text-muted-foreground/60">mypr.pro.bd</p>
-                          </div>
-                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Hidden from public profile — toggle to show'}
+                        </p>
                       </div>
                     </div>
                   )

@@ -145,7 +145,6 @@ describe('Settings Page', () => {
     expect(await screen.findByText('mypr')).toBeInTheDocument()
     expect(screen.getByText('private-repo')).toBeInTheDocument()
     expect((await screen.findAllByText('Portfolio sync app')).length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: /download screenshot for faisal\/mypr/i })).toBeInTheDocument()
   })
 
   it('shows the active and total repository count from fetched repos', async () => {
@@ -209,24 +208,6 @@ describe('Settings Page', () => {
     expect((await screen.findAllByText('Visible on profile, timeline, and feed')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Hidden from profile')).not.toBeInTheDocument()
     expect(screen.queryByText('Visible on profile')).not.toBeInTheDocument()
-  })
-
-  it('downloads a screenshot for a specific repository card', async () => {
-    mockInitialFetch()
-
-    render(<SettingsPage />)
-
-    const button = await screen.findByRole('button', { name: /download screenshot for faisal\/mypr/i })
-    fireEvent.click(button)
-
-    await waitFor(() => {
-      expect(mockDownloadAsImage).toHaveBeenCalledTimes(1)
-    })
-
-    expect(mockDownloadAsImage).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
-      'repo-faisal-mypr.png'
-    )
   })
 
   it('rolls back repository state when a toggle request fails', async () => {

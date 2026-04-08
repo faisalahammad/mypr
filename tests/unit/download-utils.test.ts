@@ -2,14 +2,10 @@
  * Unit tests for downloadAsImage utility
  */
 
-// Mock html2canvas before importing anything
-const mockToDataURL = jest.fn(() => 'data:image/png;base64,abc123')
-const mockCanvas = { toDataURL: mockToDataURL }
-const mockHtml2canvas = jest.fn(() => Promise.resolve(mockCanvas))
+const mockToPng = jest.fn(() => Promise.resolve('data:image/png;base64,abc123'))
 
-jest.mock('html2canvas', () => ({
-  __esModule: true,
-  default: mockHtml2canvas
+jest.mock('html-to-image', () => ({
+  toPng: mockToPng,
 }))
 
 import { downloadAsImage } from '@/lib/utils'
@@ -23,7 +19,6 @@ describe('downloadAsImage', () => {
 
     mockLink = { download: '', href: '', click: jest.fn() }
 
-    // Save original before mocking to avoid infinite recursion
     originalCreateElement = document.createElement.bind(document)
     jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       if (tag === 'a') return mockLink as unknown as HTMLAnchorElement
@@ -35,10 +30,13 @@ describe('downloadAsImage', () => {
     jest.restoreAllMocks()
   })
 
-  it('calls html2canvas with the provided element and useCORS option', async () => {
+  it('calls toPng with the provided element and options', async () => {
     const element = originalCreateElement('div') as HTMLDivElement
     await downloadAsImage(element, 'test.png')
-    expect(mockHtml2canvas).toHaveBeenCalledWith(element, { useCORS: true })
+    expect(mockToPng).toHaveBeenCalledWith(element, expect.objectContaining({
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+    }))
   })
 
   it('sets the download filename on the anchor element', async () => {
@@ -47,7 +45,7 @@ describe('downloadAsImage', () => {
     expect(mockLink.download).toBe('my-pr.png')
   })
 
-  it('sets the href to the canvas data URL', async () => {
+  it('sets the href to the data URL from toPng', async () => {
     const element = originalCreateElement('div') as HTMLDivElement
     await downloadAsImage(element, 'test.png')
     expect(mockLink.href).toBe('data:image/png;base64,abc123')
@@ -57,12 +55,6 @@ describe('downloadAsImage', () => {
     const element = originalCreateElement('div') as HTMLDivElement
     await downloadAsImage(element, 'test.png')
     expect(mockLink.click).toHaveBeenCalledTimes(1)
-  })
-
-  it('calls toDataURL with image/png format', async () => {
-    const element = originalCreateElement('div') as HTMLDivElement
-    await downloadAsImage(element, 'test.png')
-    expect(mockToDataURL).toHaveBeenCalledWith('image/png')
   })
 
   it('works with different filenames', async () => {
