@@ -2,7 +2,7 @@ import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@
 import { searchMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
 import { getProfileResultsTag } from '@/lib/profile-results'
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     revalidateTag(getProfileResultsTag(typedProfile.github_username), 'max')
+    revalidatePath(`/${typedProfile.github_username}`)
 
     return NextResponse.json({
       success: true,

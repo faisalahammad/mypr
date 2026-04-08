@@ -102,6 +102,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
           {!isLandingPage && username && (
             <Link
               href={`/${username}`}
+              prefetch={false}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 isActive(`/${username}`)
                   ? 'bg-primary/10 text-primary'
@@ -117,7 +118,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
         {/* Right side: avatar + sign out */}
         <div className="flex items-center gap-2">
           {isAuthenticatedView && avatarUrl && username && (
-            <Link href={`/${username}`} aria-label="Your profile">
+            <Link href={`/${username}`} aria-label="Your profile" prefetch={false}>
               <img
                 src={avatarUrl}
                 alt={username}
@@ -180,6 +181,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
           {isAuthenticatedView && username && (
             <Link
               href={`/${username}`}
+              prefetch={false}
               onClick={() => setMenuOpen(false)}
               className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                 isActive(`/${username}`) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'

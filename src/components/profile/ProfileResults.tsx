@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { downloadAsImage } from '@/lib/utils'
 import {
@@ -13,9 +13,6 @@ import styles from './ProfileResults.module.css'
 interface ProfileResultsProps {
   model: ProfileResultsModel
 }
-
-const MODEL_CACHE_PREFIX = 'mypr.profile-results:'
-const VIEW_CACHE_PREFIX = 'mypr.profile-results-view:'
 
 function formatTimelineDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -36,37 +33,6 @@ export function ProfileResults({ model }: ProfileResultsProps) {
   const [tweetModalOpen, setTweetModalOpen] = useState(false)
   const [copyToastVisible, setCopyToastVisible] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [cachedModel, setCachedModel] = useState<ProfileResultsModel>(model)
-
-  useEffect(() => {
-    const modelKey = `${MODEL_CACHE_PREFIX}${model.identity.username}`
-    const viewKey = `${VIEW_CACHE_PREFIX}${model.identity.username}`
-
-    try {
-      const stored = window.sessionStorage.getItem(modelKey)
-      if (stored) {
-        const parsed = JSON.parse(stored) as ProfileResultsModel
-        if (parsed.identity.username === model.identity.username) {
-          setCachedModel(parsed)
-        }
-      }
-    } catch {
-      setCachedModel(model)
-    }
-
-    window.sessionStorage.setItem(modelKey, JSON.stringify(model))
-    window.sessionStorage.setItem(viewKey, 'repos')
-    setCachedModel(model)
-    setActiveView('repos')
-  }, [model])
-
-  useEffect(() => {
-    try {
-      window.sessionStorage.setItem(`${VIEW_CACHE_PREFIX}${cachedModel.identity.username}`, activeView)
-    } catch {
-      // Ignore storage failures.
-    }
-  }, [activeView, cachedModel.identity.username])
 
   const handleScreenshot = async () => {
     if (!previewCardRef.current) return
@@ -76,10 +42,10 @@ export function ProfileResults({ model }: ProfileResultsProps) {
     try {
       await downloadAsImage(
         previewCardRef.current,
-        getCaptureFilename(cachedModel.identity.username, activeView),
+        getCaptureFilename(model.identity.username, activeView),
         activeView === 'timeline'
-          ? { backgroundColor: '#161b22', maxHeight: 2200 }
-          : { backgroundColor: '#161b22' }
+          ? { backgroundColor: '#f8fafc', maxHeight: 2200 }
+          : { backgroundColor: '#f8fafc' }
       )
     } finally {
       setIsDownloading(false)
@@ -97,21 +63,21 @@ export function ProfileResults({ model }: ProfileResultsProps) {
       <div className={styles.inner}>
         <div className={styles.resultsHeader}>
           <div className={styles.userInfo}>
-            {cachedModel.identity.avatarUrl ? (
+            {model.identity.avatarUrl ? (
               <img
-                src={cachedModel.identity.avatarUrl}
-                alt={cachedModel.identity.displayName}
+                src={model.identity.avatarUrl}
+                alt={model.identity.displayName}
                 className={styles.userAvatar}
               />
             ) : (
               <span className={styles.userAvatarFallback} aria-hidden="true">
-                {cachedModel.identity.username.slice(0, 1).toUpperCase()}
+                {model.identity.username.slice(0, 1).toUpperCase()}
               </span>
             )}
             <div>
-              <div className={styles.userName}>{cachedModel.identity.displayName}</div>
+              <div className={styles.userName}>{model.identity.displayName}</div>
               <div className={styles.userMeta}>
-                @{cachedModel.identity.username} · {cachedModel.counts.mergedPRs} merged PRs · {cachedModel.counts.repos} repos
+                @{model.identity.username} · {model.counts.mergedPRs} merged PRs · {model.counts.repos} repos
               </div>
             </div>
           </div>
@@ -164,7 +130,7 @@ export function ProfileResults({ model }: ProfileResultsProps) {
           <div className={styles.previewContent}>
             {activeView === 'repos' && (
               <div className={styles.repoGrid}>
-                {cachedModel.repoGrid.map((repo) => (
+                {model.repoGrid.map((repo) => (
                   <article key={repo.fullName} className={styles.repoCard}>
                     <div className={styles.repoHeader}>
                       <div className={styles.repoIcon}>📁</div>
@@ -202,18 +168,18 @@ export function ProfileResults({ model }: ProfileResultsProps) {
                 <div className={styles.summaryStats}>
                   <div className={styles.summaryCard}>
                     <div className={styles.summaryCardLabel}>Merged PRs</div>
-                    <div className={styles.summaryCardValue}>{cachedModel.summary.mergedPRs}</div>
+                    <div className={styles.summaryCardValue}>{model.summary.mergedPRs}</div>
                   </div>
                   <div className={styles.summaryCard}>
                     <div className={styles.summaryCardLabel}>Active Repos</div>
-                    <div className={styles.summaryCardValue}>{cachedModel.summary.repos}</div>
+                    <div className={styles.summaryCardValue}>{model.summary.repos}</div>
                   </div>
                 </div>
 
                 <section className={styles.summaryLeaderboard} aria-label="Top Repositories">
                   <div className={styles.summaryLeaderboardHeader}>Top Repositories</div>
                   <div className={styles.summaryLeaderboardList}>
-                    {cachedModel.summary.topRepositories.map((repo, index) => (
+                    {model.summary.topRepositories.map((repo, index) => (
                       <div key={repo.fullName} className={styles.summaryLeaderboardItem}>
                         <span className={styles.summaryRank}>{index + 1}</span>
                         <div className={styles.summaryRepoName}>{repo.fullName}</div>
@@ -227,7 +193,7 @@ export function ProfileResults({ model }: ProfileResultsProps) {
 
             {activeView === 'timeline' && (
               <div className={styles.timeline}>
-                {cachedModel.timeline.map((entry) => (
+                {model.timeline.map((entry) => (
                   <div key={entry.id} className={styles.timelineItem}>
                     <a href={entry.url} target="_blank" rel="noreferrer" className={styles.timelineCard}>
                       <div className={styles.timelineRepo}>{entry.repoFullName}</div>
@@ -259,7 +225,7 @@ export function ProfileResults({ model }: ProfileResultsProps) {
               </button>
             </div>
             <div className={styles.modalBody}>
-              {cachedModel.shareVariants.map((variant, index) => (
+              {model.shareVariants.map((variant, index) => (
                 <div key={variant} className={styles.tweetCard}>
                   <div className={styles.tweetText}>{variant}</div>
                   <div className={styles.tweetActions}>

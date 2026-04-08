@@ -1,18 +1,18 @@
 .root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #1c2128;
-  --border: #30363d;
-  --border2: #21262d;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --border: #d7dee8;
+  --border2: #e2e8f0;
   --accent: #58a6ff;
   --accent2: #3fb950;
   --accent3: #f78166;
-  --accent4: #d2a8ff;
-  --text: #e6edf3;
-  --text2: #8b949e;
-  --text3: #6e7681;
+  --accent4: #6d28d9;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #64748b;
   --merged: #8957e5;
-  --mergedBg: #1f1635;
+  --mergedBg: #efe7ff;
   --radius: 8px;
   --radius2: 12px;
   position: relative;
@@ -20,12 +20,12 @@
   border: 1px solid var(--border2);
   border-radius: 24px;
   background:
-    radial-gradient(circle at top left, rgb(88 166 255 / 0.1), transparent 28%),
-    radial-gradient(circle at top right, rgb(137 87 229 / 0.12), transparent 32%),
+    radial-gradient(circle at top left, rgb(88 166 255 / 0.09), transparent 28%),
+    radial-gradient(circle at top right, rgb(137 87 229 / 0.08), transparent 32%),
     var(--bg);
   color: var(--text);
   padding: 28px;
-  box-shadow: 0 24px 60px rgb(0 0 0 / 0.28);
+  box-shadow: 0 24px 60px rgb(15 23 42 / 0.08);
 }
 
 .root::before {
@@ -129,7 +129,7 @@
 
 .downloadButton {
   background: var(--accent2);
-  color: #000;
+  color: #052e16;
 }
 
 .styleTabs {
@@ -157,9 +157,9 @@
 }
 
 .styleTabActive {
-  background: var(--bg);
+  background: white;
   color: var(--text);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+  box-shadow: 0 8px 20px rgb(15 23 42 / 0.08);
 }
 
 .previewCard {
@@ -207,10 +207,11 @@
 }
 
 .repoCard {
-  background: var(--bg);
+  background: white;
   border: 1px solid var(--border2);
   border-radius: var(--radius);
   padding: 16px;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 0.04);
 }
 
 .repoHeader {
@@ -264,7 +265,7 @@
   display: block;
   border-radius: var(--radius);
   border: 1px solid var(--border2);
-  background: var(--surface2);
+  background: #f8fafc;
   padding: 10px 12px;
   color: inherit;
   text-decoration: none;
@@ -299,7 +300,7 @@
 
 .summaryCard {
   border-radius: var(--radius2);
-  background: linear-gradient(180deg, rgb(88 166 255 / 0.08), rgb(22 27 34 / 1));
+  background: linear-gradient(180deg, rgb(88 166 255 / 0.08), #ffffff);
   border: 1px solid var(--border);
   padding: 20px;
 }
@@ -322,7 +323,7 @@
 .summaryLeaderboard {
   border-radius: var(--radius2);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: white;
   overflow: hidden;
 }
 
@@ -412,10 +413,11 @@
   display: block;
   border-radius: var(--radius2);
   border: 1px solid var(--border2);
-  background: var(--bg);
+  background: white;
   padding: 16px;
   color: inherit;
   text-decoration: none;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 0.04);
 }
 
 .timelineCard:hover {
@@ -445,7 +447,7 @@
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 0.72);
+  background: rgb(15 23 42 / 0.25);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
@@ -458,8 +460,8 @@
   width: min(680px, 100%);
   border-radius: 20px;
   border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 28px 80px rgb(0 0 0 / 0.45);
+  background: white;
+  box-shadow: 0 28px 80px rgb(15 23 42 / 0.18);
 }
 
 .modalHeader {
@@ -492,7 +494,7 @@
 
 .tweetCard {
   border: 1px solid var(--border2);
-  background: var(--bg);
+  background: #f8fafc;
   border-radius: 14px;
   padding: 16px;
 }
@@ -511,7 +513,7 @@
 
 .copyButton {
   border: 1px solid var(--border);
-  background: var(--surface2);
+  background: white;
   color: var(--text);
   border-radius: var(--radius);
   padding: 8px 12px;
@@ -526,11 +528,11 @@
   z-index: 60;
   border-radius: 999px;
   background: var(--accent2);
-  color: #000;
+  color: #052e16;
   padding: 10px 14px;
   font-size: 0.82rem;
   font-weight: 700;
-  box-shadow: 0 18px 40px rgb(0 0 0 / 0.24);
+  box-shadow: 0 18px 40px rgb(15 23 42 / 0.14);
 }
 
 @media (max-width: 767px) {

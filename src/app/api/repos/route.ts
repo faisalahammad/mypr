@@ -1,7 +1,7 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
 import { getProfileResultsTag } from '@/lib/profile-results'
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
 
 // GET — return repositories from our local Supabase cache (no GitHub API call)
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (profile?.github_username) {
       revalidateTag(getProfileResultsTag(profile.github_username), 'max')
+      revalidatePath(`/${profile.github_username}`)
     }
 
     return NextResponse.json({

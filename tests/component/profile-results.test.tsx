@@ -149,4 +149,22 @@ describe('ProfileResults', () => {
       maxHeight: 2200,
     })
   })
+
+  it('prefers the fresh server model over stale session storage on route entry', () => {
+    window.sessionStorage.setItem(
+      'mypr.profile-results:faisalahammad',
+      JSON.stringify({
+        ...model,
+        counts: {
+          mergedPRs: 99,
+          repos: 9,
+        },
+      })
+    )
+
+    render(<ProfileResults model={model} />)
+
+    expect(screen.getByText('@faisalahammad · 4 merged PRs · 2 repos')).toBeInTheDocument()
+    expect(screen.queryByText('@faisalahammad · 99 merged PRs · 9 repos')).not.toBeInTheDocument()
+  })
 })
