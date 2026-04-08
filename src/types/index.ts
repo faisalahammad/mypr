@@ -20,6 +20,7 @@ export interface Repository {
   user_id: string
   repo_full_name: string
   is_active: boolean
+  owner_avatar_url: string | null
   created_at: string
 }
 
@@ -45,6 +46,7 @@ export interface PullRequestWithProfile extends PullRequest {
     github_avatar_url: string | null
     display_name: string | null
   }
+  repo_owner_avatar_url?: string | null
 }
 
 export interface TimelineItem {

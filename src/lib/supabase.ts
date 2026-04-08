@@ -67,6 +67,7 @@ export interface Database {
           is_active: boolean
           pr_count: number
           last_synced_at: string | null
+          owner_avatar_url: string | null
           created_at: string
         }
         Insert: {
@@ -77,6 +78,7 @@ export interface Database {
           is_active?: boolean
           pr_count?: number
           last_synced_at?: string | null
+          owner_avatar_url?: string | null
           created_at?: string
         }
         Update: {
@@ -87,6 +89,7 @@ export interface Database {
           is_active?: boolean
           pr_count?: number
           last_synced_at?: string | null
+          owner_avatar_url?: string | null
           created_at?: string
         }
       }
@@ -137,6 +140,23 @@ export interface Database {
           synced_at?: string
         }
       }
+      sync_metadata: {
+        Row: {
+          user_id: string
+          last_date_range: string | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          last_date_range?: string | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          last_date_range?: string | null
+          updated_at?: string
+        }
+      }
     }
   }
 }
@@ -156,7 +176,8 @@ const hasFeedProfile = (pr: PRWithProfileRow): pr is Database['public']['Tables'
 
 const mapFeedPRs = (
   prs: PRWithProfileRow[],
-  source: NonNullable<PullRequestWithProfile['source']>
+  source: NonNullable<PullRequestWithProfile['source']>,
+  repoAvatarLookup?: Map<string, string | null>
 ): PullRequestWithProfile[] =>
   prs
     .filter(hasFeedProfile)
@@ -175,7 +196,44 @@ const mapFeedPRs = (
       synced_at: pr.synced_at,
       source,
       profile: pr.profiles,
+      repo_owner_avatar_url: repoAvatarLookup?.get(`${pr.user_id}:${pr.repo_full_name}`) ?? null,
     }))
+
+const buildRepoAvatarLookup = async (
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  prs: Array<{ user_id: string; repo_full_name: string }>
+): Promise<Map<string, string | null>> => {
+  const uniqueRepos = new Map<string, { user_id: string; repo_full_name: string }>()
+  for (const pr of prs) {
+    const key = `${pr.user_id}:${pr.repo_full_name}`
+    if (!uniqueRepos.has(key)) {
+      uniqueRepos.set(key, pr)
+    }
+  }
+
+  const pairs = Array.from(uniqueRepos.values())
+  if (pairs.length === 0) return new Map()
+
+  const results = await Promise.all(
+    pairs.map((p) =>
+      supabase
+        .from('repositories')
+        .select('user_id, repo_full_name, owner_avatar_url')
+        .eq('user_id', p.user_id)
+        .eq('repo_full_name', p.repo_full_name)
+        .limit(1)
+    )
+  )
+
+  const lookup = new Map<string, string | null>()
+  for (const { data } of results) {
+    const repo = (data as Array<{ user_id: string; repo_full_name: string; owner_avatar_url: string | null }> | null)?.[0]
+    if (repo) {
+      lookup.set(`${repo.user_id}:${repo.repo_full_name}`, repo.owner_avatar_url)
+    }
+  }
+  return lookup
+}
 
 // Server client for use in server components (reads cookies from next/headers)
 export const createSupabaseServerClient = async () => {
@@ -397,7 +455,8 @@ export const getFollowedPRs = async (
   const visiblePRs = filterPRsByActiveRepos(prs ?? [], activeRepoLookup)
     .slice(offset, offset + limit)
 
-  return mapFeedPRs(visiblePRs as PRWithProfileRow[], 'followed')
+  const repoAvatarLookup = await buildRepoAvatarLookup(supabase, visiblePRs)
+  return mapFeedPRs(visiblePRs as PRWithProfileRow[], 'followed', repoAvatarLookup)
 }
 
 const getFollowingIds = async (userId: string) => {
@@ -539,9 +598,11 @@ export const getSuggestedPRs = async (
   }
 
   const visiblePRs = filterPRsByActiveRepos(prs, activeRepoLookup)
+  const slicedPRs = visiblePRs.slice(offset, offset + limit)
+  const repoAvatarLookup = await buildRepoAvatarLookup(supabase, slicedPRs)
 
   return {
-    prs: mapFeedPRs(visiblePRs.slice(offset, offset + limit) as PRWithProfileRow[], 'suggested'),
+    prs: mapFeedPRs(slicedPRs as PRWithProfileRow[], 'suggested', repoAvatarLookup),
     hasMore: offset + limit < visiblePRs.length,
     total: visiblePRs.length,
   }
