@@ -251,6 +251,15 @@ export default function SettingsPage() {
     return { totalRepos, inactiveCount, totalCachedPRs }
   }, [activeCount, repos])
 
+  const sortedRepos = useMemo(() => {
+    return [...repos].sort((a, b) => {
+      if (a.is_active !== b.is_active) {
+        return a.is_active ? -1 : 1
+      }
+      return a.repo_full_name.localeCompare(b.repo_full_name)
+    })
+  }, [repos])
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(235,71,153,0.12),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.88))]">
       <AppShell className="py-10">
@@ -452,7 +461,7 @@ export default function SettingsPage() {
 
             {!isLoadingRepos && !repoError && repos.length > 0 && (
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {repos.map((repo) => {
+                {sortedRepos.map((repo) => {
                   const [owner, name] = repo.repo_full_name.split('/')
                   const isPending = pendingRepos[repo.repo_full_name]
                   const isDownloading = downloadingRepos[repo.repo_full_name]
@@ -475,7 +484,7 @@ export default function SettingsPage() {
                             </Avatar>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                                <span className="hidden rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                                   {owner}
                                 </span>
                                 <h3 className="text-base font-semibold text-foreground">{name}</h3>
@@ -515,7 +524,7 @@ export default function SettingsPage() {
 
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs text-muted-foreground">
-                            {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Cached only — toggle to make public'}
+                            {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Hidden from public profile — toggle to show'}
                           </p>
 
                           <Button
