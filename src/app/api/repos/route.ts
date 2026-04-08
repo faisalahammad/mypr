@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // Fetch repos from our cache — only repos that have been discovered via sync
     const { data: repos, error: reposError } = await supabase
       .from('repositories')
-      .select('repo_full_name, description, is_active, pr_count, last_synced_at, created_at')
+      .select('repo_full_name, description, is_active, pr_count, last_synced_at, owner_avatar_url, created_at')
       .eq('user_id', session.user.id)
       .order('pr_count', { ascending: false })
 
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       is_active: boolean
       pr_count: number
       last_synced_at: string | null
+      owner_avatar_url: string | null
       created_at: string
     }>
 

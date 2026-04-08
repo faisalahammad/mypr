@@ -204,6 +204,7 @@ export interface MergedPR {
 export interface RepoWithPRs {
   repo_full_name: string
   description: string | null
+  owner_avatar_url: string | null
   prs: MergedPR[]
 }
 
@@ -316,6 +317,7 @@ export const searchMergedPRs = async (
     Array.from(repoMap.entries()).map(async ([repo_full_name, prs]) => {
       const [owner, repo] = repo_full_name.split('/')
       let description: string | null = null
+      let owner_avatar_url: string | null = null
 
       try {
         const { data: repoData } = await octokit.request('GET /repos/{owner}/{repo}', {
@@ -323,7 +325,9 @@ export const searchMergedPRs = async (
           repo,
           headers: { 'X-GitHub-Api-Version': '2022-11-28' }
         })
-        description = (repoData as { description?: string | null }).description ?? null
+        const typed = repoData as { description?: string | null; owner?: { avatar_url?: string | null } }
+        description = typed.description ?? null
+        owner_avatar_url = typed.owner?.avatar_url ?? null
       } catch {
         description = null
       }
@@ -331,6 +335,7 @@ export const searchMergedPRs = async (
       return {
         repo_full_name,
         description,
+        owner_avatar_url,
         prs: prs.sort((a, b) => new Date(b.merged_at).getTime() - new Date(a.merged_at).getTime())
       } as RepoWithPRs
     })

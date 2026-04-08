@@ -76,13 +76,14 @@ export async function POST(request: NextRequest) {
     let totalSynced = 0
 
     for (const repoData of reposWithPRs) {
-      const { repo_full_name, description, prs } = repoData
+      const { repo_full_name, description, owner_avatar_url, prs } = repoData
 
       // Upsert the repository into our cache with description and PR count
       const repoUpsertData = {
         user_id: session.user.id,
         repo_full_name,
         description,
+        owner_avatar_url,
         pr_count: prs.length,
         last_synced_at: now,
         // Keep is_active as false by default (user decides to include in profile)
@@ -146,6 +147,18 @@ export async function POST(request: NextRequest) {
         .eq('repo_full_name', repo_full_name)
     }
 
+    const { error: metaError } = await serviceClient
+      .from('sync_metadata')
+      .upsert({
+        user_id: session.user.id,
+        last_date_range: dateRange,
+        updated_at: now,
+      } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
+
+    if (metaError) {
+      console.error('Error upserting sync metadata:', metaError)
+    }
+
     return NextResponse.json({
       success: true,
       synced: totalSynced,
@@ -196,9 +209,18 @@ export async function GET(request: NextRequest) {
     const typedRepos = (repos ?? []) as Array<{ last_synced_at: string | null }>
     const lastSynced = typedRepos.length > 0 ? typedRepos[0].last_synced_at : null
 
+    const { data: syncMeta } = await supabase
+      .from('sync_metadata')
+      .select('last_date_range')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+
+    const typedMeta = syncMeta as { last_date_range: string | null } | null
+
     return NextResponse.json({
       last_synced: lastSynced,
-      total_prs: count || 0
+      total_prs: count || 0,
+      last_date_range: typedMeta?.last_date_range ?? null,
     })
 
   } catch (error) {
