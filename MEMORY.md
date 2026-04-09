@@ -7,9 +7,58 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 
 ## Current Status
 
-**Phase:** Phase 10 — Polish and Deploy 🚧 READY TO START
-**Last completed:** Repository settings UI alignment and direct GitHub login (2026-04-08)
-**Next:** Task 10.1 — Add page metadata and OG images
+**Phase:** Feed overhaul complete, back to Phase 10 — Polish and Deploy 🚧
+**Last completed:** Public About page for Faisal Ahammad with footer navigation and SEO metadata (2026-04-09)
+**Next:** Verify Faisal's social profile URLs before deployment and continue Phase 10 polish
+
+---
+
+## Session Summary (2026-04-09)
+
+### Completed This Session
+- ✅ Added a new public `/about` page at `src/app/about/page.tsx` using the public profile shell pattern
+- ✅ Added exact About page metadata, canonical URL, Open Graph fields, and Person JSON-LD schema
+- ✅ Added static server components for `ProfileHero`, `WorkHistory`, `ContributionGrid`, and `WordCampSection`
+- ✅ Added the supplied portrait to `public/faisal-ahammad.jpg` with `alt="Faisal Ahammad"`
+- ✅ Added inline static sections for Published Plugins, Current Projects, and Get in Touch
+- ✅ Updated the shared footer so `About` appears in both landing and non-landing footer navigation
+- ✅ Added targeted About page and footer tests
+
+### Manual Steps Already Required
+- Verify these social URLs before deploying the About page:
+  - `https://github.com/faisalahammad`
+  - `https://linkedin.com/in/faisalahammad`
+  - `https://profiles.wordpress.org/faisalahammad`
+  - `https://twitter.com/faisalahammad`
+
+### Verification
+- `npm test -- tests/unit/about-page.test.tsx tests/component/about-components.test.tsx tests/component/footer.test.tsx`
+- `npm run build`
+
+---
+
+## Session Summary (2026-04-09)
+
+### Completed This Session
+- ✅ Added the new scored feed engine in `src/lib/feed.ts` with relationship weighting, recency decay, engagement boost, cursor pagination, diversity penalties, and feed-cache helpers
+- ✅ Replaced the old feed page wiring with the new `/api/feed` flow and server-rendered cache-aware initial load
+- ✅ Added `/api/feed/invalidate` and `/api/reactions` routes
+- ✅ Added feed UI components for infinite scroll, reaction buttons, optimistic PR reactions, and loading skeletons
+- ✅ Added `reactions`, `feed_cache`, `github_follows`, and `pull_requests.reaction_counts` typing support in `src/lib/supabase.ts`
+- ✅ Updated auth callback to sync GitHub follows into `github_follows` and invalidate the current user feed cache
+- ✅ Updated follow and PR sync routes to invalidate feed cache according to the new rules
+
+### Manual Steps Already Required
+- SQL already run manually in Supabase for:
+  - `reactions`
+  - `feed_cache`
+  - `github_follows`
+  - `pull_requests.reaction_counts`
+  - reaction count trigger
+
+### Verification
+- `npm test -- tests/unit/feed.test.ts`
+- Targeted TypeScript check passed for the touched feed, route, and cache invalidation files
 
 ---
 
