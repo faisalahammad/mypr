@@ -89,7 +89,7 @@ export function ProfileHero() {
           </p>
 
           <p className="max-w-4xl text-sm leading-7 text-muted-foreground sm:text-base">
-            Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh. With over ten years in the WordPress ecosystem, he has held engineering and support roles at some of the most recognised WordPress product companies in the world, including Elegant Themes, OnTheGoSystems, Saturday Drive, and SiteCare. He has contributed code to WordPress Core across multiple versions, merged pull requests into widely-used plugins, organised and spoken at WordCamps, and built and published his own plugins on WordPress.org. He created mypr.pro.bd to give open source contributors a better way to document and share their work.
+            Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh. With over ten years in the WordPress ecosystem, he has held engineering and support roles at some of the most recognised WordPress product companies in the world, including Elegant Themes, OnTheGoSystems, Saturday Drive, and SiteCare. He has contributed code to WordPress Core across multiple versions, merged pull requests into widely-used plugins, organised and spoken at WordCamps, and built and published his own plugins on WordPress.org. He created MyPR to give open source contributors a better way to document and share their work.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-1">

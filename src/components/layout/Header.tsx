@@ -69,7 +69,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
             <GitPullRequestArrow className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-mono text-sm font-semibold tracking-tight text-foreground hidden sm:block">
-            mypr.pro.bd
+            MyPR
           </span>
         </Link>
 

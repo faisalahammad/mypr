@@ -27,6 +27,12 @@ jest.mock('@/lib/supabase-client', () => ({
 }))
 
 describe('Header', () => {
+  it('renders the MyPR brand in shared header chrome', () => {
+    render(<Header username="faisalahammad" avatarUrl="https://example.com/avatar.png" />)
+
+    expect(screen.getByText('MyPR')).toBeInTheDocument()
+  })
+
   it('disables prefetch for profile navigation links', () => {
     render(<Header username="faisalahammad" avatarUrl="https://example.com/avatar.png" />)
 

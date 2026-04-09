@@ -12,7 +12,7 @@ import { getUserProfile } from '@/lib/supabase'
 
 export const metadata: Metadata = {
   title: 'About Faisal Ahammad — WordPress Engineer & Open Source Contributor',
-  description: 'Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Creator of mypr.pro.bd.',
+  description: 'Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Creator of MyPR.',
   keywords: [
     'Faisal Ahammad',
     'Faisal Ahammad WordPress',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     'WordPress support engineer Bangladesh',
     'WordPress open source contributor',
     'WordCamp Dhaka',
-    'mypr.pro.bd',
+    'MyPR',
   ],
   openGraph: {
     title: 'Faisal Ahammad — WordPress Engineer & Open Source Contributor',
@@ -89,9 +89,9 @@ const PUBLISHED_PLUGINS = [
 
 const CURRENT_PROJECTS = [
   {
-    name: 'mypr.pro.bd',
+    name: 'MyPR',
     description:
-      'The app you are currently on. A GitHub PR timeline platform for open source contributors. Built with Next.js, Supabase, and Tailwind CSS. mypr.pro.bd gives contributors a public, shareable timeline of their merged pull requests, a social feed of people they follow, and one-click PNG exports for sharing on LinkedIn and Twitter.',
+      'The app you are currently on. A GitHub PR timeline platform for open source contributors. Built with Next.js, Supabase, and Tailwind CSS. MyPR gives contributors a public, shareable timeline of their merged pull requests, a social feed of people they follow, and one-click PNG exports for sharing on LinkedIn and Twitter.',
   },
   {
     name: 'Subscribe Plus for MC4WP',

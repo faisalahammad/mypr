@@ -41,7 +41,7 @@ export default function Footer({ isLandingPage = false }: FooterProps) {
             <GitPullRequestArrow className="h-3.5 w-3.5 text-primary-foreground" />
           </div>
           <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
-            mypr.pro.bd
+            MyPR
           </span>
         </div>
 

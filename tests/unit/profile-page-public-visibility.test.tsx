@@ -162,4 +162,21 @@ describe('profile page public repo visibility', () => {
       },
     })
   })
+
+  it('generates MyPR-branded profile metadata', async () => {
+    const { generateMetadata } = await import('@/app/[username]/page')
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ username: 'alice' }),
+    } as never)
+
+    expect(metadata).toMatchObject({
+      title: 'Alice (@alice) | MyPR',
+      description: "View Alice's pull request portfolio on MyPR.",
+      openGraph: {
+        title: 'Alice (@alice) | MyPR',
+        description: "View Alice's pull request portfolio on MyPR.",
+      },
+    })
+  })
 })

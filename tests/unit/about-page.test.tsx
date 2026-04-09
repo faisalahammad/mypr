@@ -25,7 +25,7 @@ describe('about page', () => {
 
     expect(aboutModule.metadata).toMatchObject({
       title: 'About Faisal Ahammad — WordPress Engineer & Open Source Contributor',
-      description: 'Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Creator of mypr.pro.bd.',
+      description: 'Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Creator of MyPR.',
       alternates: {
         canonical: 'https://mypr.pro.bd/about',
       },
@@ -45,7 +45,7 @@ describe('about page', () => {
       'WordPress support engineer Bangladesh',
       'WordPress open source contributor',
       'WordCamp Dhaka',
-      'mypr.pro.bd',
+      'MyPR',
     ])
   })
 

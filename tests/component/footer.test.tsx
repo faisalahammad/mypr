@@ -15,6 +15,12 @@ jest.mock('@/components/layout/AppShell', () => ({
 }))
 
 describe('Footer', () => {
+  it('renders the MyPR brand in shared footer chrome', () => {
+    render(<Footer />)
+
+    expect(screen.getByText('MyPR')).toBeInTheDocument()
+  })
+
   it('renders the About link in the default footer navigation', () => {
     render(<Footer />)
 
