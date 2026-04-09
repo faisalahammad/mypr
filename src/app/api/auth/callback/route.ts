@@ -81,15 +81,19 @@ export async function GET(request: NextRequest) {
         const typedMatchedProfiles = (matchedProfiles ?? []) as Array<Pick<Database['public']['Tables']['profiles']['Row'], 'id'>>
 
         if (typedMatchedProfiles.length > 0) {
-          const followRows = typedMatchedProfiles.map((profile) => ({
+          const githubFollowRows = typedMatchedProfiles.map((profile) => ({
             follower_id: session.user.id,
             following_id: profile.id,
-          })) as Database['public']['Tables']['follows']['Insert'][]
+          })) as Database['public']['Tables']['github_follows']['Insert'][]
 
-          // Upsert — safe to call on every login, ignored on conflict
           await supabase
-            .from('follows')
-            .upsert(followRows as never, { onConflict: 'follower_id,following_id' })
+            .from('github_follows')
+            .upsert(githubFollowRows as never, { onConflict: 'follower_id,following_id' })
+
+          await supabase
+            .from('feed_cache')
+            .delete()
+            .eq('user_id', session.user.id)
         }
       }
     } catch (followError) {

@@ -58,6 +58,23 @@ export interface Database {
           created_at?: string
         }
       }
+      github_follows: {
+        Row: {
+          follower_id: string
+          following_id: string
+          created_at: string
+        }
+        Insert: {
+          follower_id: string
+          following_id: string
+          created_at?: string
+        }
+        Update: {
+          follower_id?: string
+          following_id?: string
+          created_at?: string
+        }
+      }
       repositories: {
         Row: {
           id: string
@@ -107,6 +124,7 @@ export interface Database {
           deletions: number
           commits_count: number
           is_approved: boolean
+          reaction_counts: Record<'love' | 'thumbsup' | 'informative' | 'support' | 'funny', number>
           synced_at: string
         }
         Insert: {
@@ -122,6 +140,7 @@ export interface Database {
           deletions?: number
           commits_count?: number
           is_approved?: boolean
+          reaction_counts?: Record<'love' | 'thumbsup' | 'informative' | 'support' | 'funny', number>
           synced_at?: string
         }
         Update: {
@@ -137,7 +156,51 @@ export interface Database {
           deletions?: number
           commits_count?: number
           is_approved?: boolean
+          reaction_counts?: Record<'love' | 'thumbsup' | 'informative' | 'support' | 'funny', number>
           synced_at?: string
+        }
+      }
+      reactions: {
+        Row: {
+          id: string
+          pr_id: string
+          user_id: string
+          reaction_type: 'love' | 'thumbsup' | 'informative' | 'support' | 'funny'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          pr_id: string
+          user_id: string
+          reaction_type: 'love' | 'thumbsup' | 'informative' | 'support' | 'funny'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          pr_id?: string
+          user_id?: string
+          reaction_type?: 'love' | 'thumbsup' | 'informative' | 'support' | 'funny'
+          created_at?: string
+        }
+      }
+      feed_cache: {
+        Row: {
+          user_id: string
+          feed_json: unknown
+          generated_at: string
+          expires_at: string
+        }
+        Insert: {
+          user_id: string
+          feed_json: unknown
+          generated_at?: string
+          expires_at: string
+        }
+        Update: {
+          user_id?: string
+          feed_json?: unknown
+          generated_at?: string
+          expires_at?: string
         }
       }
       sync_metadata: {

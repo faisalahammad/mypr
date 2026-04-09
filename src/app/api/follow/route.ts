@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to follow user' }, { status: 500 })
   }
 
+  await supabase
+    .from('feed_cache')
+    .delete()
+    .eq('user_id', session.user.id)
+
   return NextResponse.json({ following: true })
 }
 
@@ -75,6 +80,11 @@ export async function DELETE(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: 'Failed to unfollow user' }, { status: 500 })
   }
+
+  await supabase
+    .from('feed_cache')
+    .delete()
+    .eq('user_id', session.user.id)
 
   return NextResponse.json({ following: false })
 }

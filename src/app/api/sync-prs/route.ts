@@ -167,6 +167,25 @@ export async function POST(request: NextRequest) {
       console.error('Error upserting sync metadata:', metaError)
     }
 
+    const { data: followers } = await serviceClient
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', session.user.id)
+
+    const cacheInvalidationIds = Array.from(
+      new Set([
+        session.user.id,
+        ...((followers ?? []) as Array<{ follower_id: string }>).map((row) => row.follower_id),
+      ])
+    )
+
+    if (cacheInvalidationIds.length > 0) {
+      await serviceClient
+        .from('feed_cache')
+        .delete()
+        .in('user_id', cacheInvalidationIds)
+    }
+
     revalidateTag(getProfileResultsTag(typedProfile.github_username), 'max')
     revalidatePath(`/${typedProfile.github_username}`)
 
