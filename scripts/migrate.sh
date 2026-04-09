@@ -18,8 +18,15 @@ PROJECT_REF=$(echo $SUPABASE_URL | sed 's|https://||' | sed 's|\.supabase\.co||'
 
 echo "📡 Connecting to Supabase project: $PROJECT_REF"
 
-# Read the migration file
-SQL_CONTENT=$(cat supabase/migrations/001_initial_schema.sql)
+# Read all migration files in order
+MIGRATION_FILES=$(find supabase/migrations -maxdepth 1 -name '*.sql' | sort)
+
+if [ -z "$MIGRATION_FILES" ]; then
+    echo "❌ No migration files found in supabase/migrations"
+    exit 1
+fi
+
+SQL_CONTENT=$(cat $MIGRATION_FILES)
 
 # Use psql if available, otherwise provide instructions
 if command -v psql &> /dev/null; then
@@ -36,7 +43,7 @@ else
     echo "⚠️  psql not found. Please run the migration manually:"
     echo ""
     echo "1. Go to: https://app.supabase.com/project/${PROJECT_REF}/sql"
-    echo "2. Copy and paste the contents of: supabase/migrations/001_initial_schema.sql"
+    echo "2. Copy and paste the contents of all files in: supabase/migrations/"
     echo "3. Click 'Run' to execute the migration"
     echo ""
     echo "Or install PostgreSQL client tools:"

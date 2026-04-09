@@ -20,7 +20,7 @@ echo ""
 echo "   Alternatively, run the migration manually in the SQL Editor:"
 echo "   https://app.supabase.com/project/${PROJECT_REF}/sql/new"
 echo ""
-echo "   File to execute: supabase/migrations/001_initial_schema.sql"
+echo "   Files to execute in order: supabase/migrations/*.sql"
 echo ""
 
 # Check if psql is available
@@ -48,13 +48,20 @@ fi
 # Construct connection string
 CONNECTION_STRING="postgresql://postgres:${DB_PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres"
 
-# Execute migration
-echo "📊 Executing migration..."
-if psql "$CONNECTION_STRING" < supabase/migrations/001_initial_schema.sql; then
+# Execute migrations
+echo "📊 Executing migrations..."
+MIGRATION_FILES=$(find supabase/migrations -maxdepth 1 -name '*.sql' | sort)
+
+if [ -z "$MIGRATION_FILES" ]; then
+    echo "❌ No migration files found in supabase/migrations"
+    exit 1
+fi
+
+if cat $MIGRATION_FILES | psql "$CONNECTION_STRING"; then
     echo ""
-    echo "✅ Migration completed successfully!"
+    echo "✅ Migrations completed successfully!"
     echo ""
-    echo "Database schema created:"
+    echo "Database schema updated with:"
     echo "  ✓ profiles table"
     echo "  ✓ follows table"
     echo "  ✓ repositories table"
@@ -62,6 +69,7 @@ if psql "$CONNECTION_STRING" < supabase/migrations/001_initial_schema.sql; then
     echo "  ✓ RLS policies enabled"
     echo "  ✓ Indexes created"
     echo "  ✓ Triggers set up"
+    echo "  ✓ Public visibility RPCs/functions"
 else
     echo ""
     echo "❌ Migration failed!"

@@ -11,10 +11,13 @@
 1. **Open Supabase SQL Editor**
    - Go to: https://app.supabase.com/project/xlayjufjlhfgkblymdsu/sql/new
 
-2. **Run the migration**
-   - Open file: `supabase/migrations/001_initial_schema.sql`
-   - Copy entire contents
-   - Paste into SQL Editor
+2. **Run the migrations**
+   - Open every file in `supabase/migrations/` in lexical order:
+     - `001_initial_schema.sql`
+     - `002_add_repo_cache_fields.sql`
+     - `003_sync_metadata_and_repo_avatar.sql`
+     - `004_public_active_repositories_rpc.sql`
+   - Copy and run each file in order, or paste the concatenated contents into SQL Editor
    - Click "Run" button
 
 3. **Verify migration**
@@ -58,8 +61,8 @@ https://app.supabase.com/project/xlayjufjlhfgkblymdsu/settings/database
 # Link your Supabase project
 supabase link --project-ref xlayjufjlhfgkblymdsu
 
-# Push the migration
-supabase db push
+# Push all local migrations
+supabase db push --linked --include-all
 ```
 
 ## Verify GitHub OAuth Configuration
@@ -109,6 +112,26 @@ supabase.from('profiles').select('*').limit(1)
 "
 ```
 
+Then verify the public visibility RPC exists:
+
+```bash
+node -e "
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config({ path: '.env.local' });
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+supabase.rpc('get_public_active_repositories', { target_user_ids: [] })
+  .then(({ error }) => {
+    if (error) console.error('❌ RPC missing:', error.message);
+    else console.log('✅ RPC available');
+  });
+"
+```
+
 ## What Gets Created
 
 The migration creates:
@@ -124,6 +147,7 @@ The migration creates:
 - ✅ Policies for authenticated users
 - ✅ Public read access for profiles and PRs
 - ✅ Private write access for own data
+- ✅ Public RPC for active repository visibility
 
 ### Performance
 - ✅ Indexes on foreign keys
@@ -160,6 +184,11 @@ After migration is complete:
 - Check SQL Editor for error messages
 - Verify migration completed successfully
 - Try running migration again
+
+**Profile page shows no active repos after sync/toggle**
+- Verify `004_public_active_repositories_rpc.sql` has been applied
+- Verify `get_public_active_repositories` resolves successfully against the live project
+- If the function exists but still fails, refresh the PostgREST schema cache or rerun `supabase db push --linked --include-all`
 
 ## Need Help?
 

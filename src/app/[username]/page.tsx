@@ -1,6 +1,10 @@
 import { notFound } from 'next/navigation'
 import { unstable_cache } from 'next/cache'
-import { createSupabasePublicClient, createSupabaseServerClient, getUserProfile } from '@/lib/supabase'
+import {
+  createSupabasePublicClient,
+  getPublicActiveRepositoriesForUsers,
+  getUserProfile,
+} from '@/lib/supabase'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ScrollToTop from '@/components/ui/ScrollToTop'
@@ -50,23 +54,13 @@ async function getPublicProfileResultsData(username: string) {
   }
 
   const supabase = createSupabasePublicClient()
-  const { data: activeRepos } = await supabase
-    .from('repositories')
-    .select('user_id, repo_full_name, owner_avatar_url')
-    .eq('user_id', typedProfile.id)
-    .eq('is_active', true)
+  const activeRepoList = await getPublicActiveRepositoriesForUsers(supabase, [typedProfile.id])
 
   const { data: prs } = await supabase
     .from('pull_requests')
     .select('*')
     .eq('user_id', typedProfile.id)
     .order('merged_at', { ascending: false })
-
-  const activeRepoList = (activeRepos ?? []) as Array<{
-    user_id: string
-    repo_full_name: string
-    owner_avatar_url: string | null
-  }>
 
   const repoAvatarLookup = new Map<string, string | null>(
     activeRepoList.map((repo) => [repo.repo_full_name, repo.owner_avatar_url])

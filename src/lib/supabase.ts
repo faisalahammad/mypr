@@ -166,6 +166,23 @@ type FeedProfile = Pick<
   'github_username' | 'github_avatar_url' | 'display_name'
 >
 
+export interface PublicActiveRepositoryRow {
+  user_id: string
+  repo_full_name: string
+  owner_avatar_url: string | null
+}
+
+type RpcCapableClient = {
+  rpc: (...args: any[]) => PromiseLike<{ data: unknown; error: unknown }>
+}
+
+type SupabaseRpcError = {
+  code?: string
+  message?: string
+  details?: string
+  hint?: string | null
+}
+
 type PRWithProfileRow = Database['public']['Tables']['pull_requests']['Row'] & {
   profiles: FeedProfile | null
 }
@@ -214,25 +231,51 @@ const buildRepoAvatarLookup = async (
   const pairs = Array.from(uniqueRepos.values())
   if (pairs.length === 0) return new Map()
 
-  const results = await Promise.all(
-    pairs.map((p) =>
-      supabase
-        .from('repositories')
-        .select('user_id, repo_full_name, owner_avatar_url')
-        .eq('user_id', p.user_id)
-        .eq('repo_full_name', p.repo_full_name)
-        .limit(1)
-    )
+  const publicActiveRepos = await getPublicActiveRepositoriesForUsers(
+    supabase,
+    pairs.map((pair) => pair.user_id)
   )
+  const pairKeys = new Set(pairs.map((pair) => `${pair.user_id}:${pair.repo_full_name}`))
 
   const lookup = new Map<string, string | null>()
-  for (const { data } of results) {
-    const repo = (data as Array<{ user_id: string; repo_full_name: string; owner_avatar_url: string | null }> | null)?.[0]
-    if (repo) {
-      lookup.set(`${repo.user_id}:${repo.repo_full_name}`, repo.owner_avatar_url)
+  for (const repo of publicActiveRepos) {
+    const key = `${repo.user_id}:${repo.repo_full_name}`
+    if (pairKeys.has(key)) {
+      lookup.set(key, repo.owner_avatar_url)
     }
   }
   return lookup
+}
+
+export const getPublicActiveRepositoriesForUsers = async (
+  supabase: RpcCapableClient,
+  userIds: string[]
+): Promise<PublicActiveRepositoryRow[]> => {
+  const uniqueUserIds = Array.from(new Set(userIds))
+
+  if (uniqueUserIds.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase.rpc('get_public_active_repositories', {
+    target_user_ids: uniqueUserIds,
+  })
+
+  if (error) {
+    const rpcError = error as SupabaseRpcError
+
+    if (rpcError.code === 'PGRST202') {
+      console.error(
+        'Public active repositories RPC is missing from Supabase. Apply migration 004_public_active_repositories_rpc.sql and refresh the schema cache.',
+        rpcError
+      )
+    } else {
+      console.error('Error fetching public active repositories:', rpcError)
+    }
+    return []
+  }
+
+  return (data ?? []) as PublicActiveRepositoryRow[]
 }
 
 // Server client for use in server components (reads cookies from next/headers)
@@ -505,22 +548,8 @@ const getFollowedPRCount = async (userId: string) => {
 const getActiveRepoLookupForUsers = async (userIds: string[]) => {
   const supabase = await createSupabaseServerClient()
 
-  if (userIds.length === 0) {
-    return new Map<string, Set<string>>()
-  }
-
-  const { data: repos, error } = await supabase
-    .from('repositories')
-    .select('user_id, repo_full_name')
-    .in('user_id', userIds)
-    .eq('is_active', true)
-
-  if (error) {
-    console.error('Error fetching active repositories:', error)
-    return new Map<string, Set<string>>()
-  }
-
-  return buildActiveRepoLookup(repos ?? [])
+  const repos = await getPublicActiveRepositoriesForUsers(supabase, userIds)
+  return buildActiveRepoLookup(repos)
 }
 
 export const getSuggestedPRs = async (
