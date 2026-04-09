@@ -216,8 +216,9 @@ describe('Settings Page', () => {
 
     await screen.findByText('mypr')
 
-    fireEvent.click(screen.getByRole('button', { name: /last 3 months/i }))
-    fireEvent.click(screen.getByRole('option', { name: /last 6 months/i }))
+    fireEvent.change(screen.getByRole('combobox', { name: /date range/i }), {
+      target: { value: '6m' },
+    })
     fireEvent.click(screen.getByRole('button', { name: /sync prs/i }))
 
     await waitFor(() => {
@@ -271,24 +272,6 @@ describe('Settings Page', () => {
     expect(screen.getByText('1 active / 2 total')).toBeInTheDocument()
   })
 
-  it('closes the date dropdown when clicking outside', async () => {
-    const user = userEvent.setup()
-    mockInitialFetch()
-
-    render(<SettingsPage />)
-
-    await screen.findByText('mypr')
-
-    await user.click(screen.getByRole('button', { name: /last 3 months/i }))
-    expect(screen.getByRole('listbox')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('heading', { name: 'Settings' }))
-
-    await waitFor(() => {
-      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-    })
-  })
-
   it('supports selecting the 24 month and lifetime options', async () => {
     const user = userEvent.setup()
     mockInitialFetch()
@@ -297,12 +280,10 @@ describe('Settings Page', () => {
 
     await screen.findByText('mypr')
 
-    await user.click(screen.getByRole('button', { name: /last 3 months/i }))
-    await user.click(screen.getByRole('option', { name: /last 24 months/i }))
-    expect(screen.getByRole('button', { name: /last 24 months/i })).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole('combobox', { name: /date range/i }), '24m')
+    expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('24m')
 
-    await user.click(screen.getByRole('button', { name: /last 24 months/i }))
-    await user.click(screen.getByRole('option', { name: /lifetime/i }))
-    expect(screen.getByRole('button', { name: /lifetime/i })).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole('combobox', { name: /date range/i }), 'lifetime')
+    expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('lifetime')
   })
 })

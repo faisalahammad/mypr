@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
   Calendar,
@@ -94,9 +94,6 @@ export default function SettingsPage() {
   const [repoUpdateError, setRepoUpdateError] = useState<string | null>(null)
   const [pendingRepos, setPendingRepos] = useState<Record<string, boolean>>({})
   const [dateRange, setDateRange] = useState<DateRange>('3m')
-  const [showDateDropdown, setShowDateDropdown] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const selectedRange = DATE_RANGE_OPTIONS.find((option) => option.value === dateRange) ?? DATE_RANGE_OPTIONS[1]
 
   const persistedRangeLabel = getRangeLabel(syncInfo?.last_date_range ?? null)
 
@@ -205,29 +202,6 @@ export default function SettingsPage() {
     Promise.allSettled([fetchRepos(), fetchSyncStatus()])
   }, [fetchRepos, fetchSyncStatus])
 
-  useEffect(() => {
-    if (!showDateDropdown) return
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDateDropdown(false)
-      }
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowDateDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [showDateDropdown])
-
   const repoStats = useMemo(() => {
     const totalRepos = repos.length
     const inactiveCount = totalRepos - activeCount
@@ -305,48 +279,22 @@ export default function SettingsPage() {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div ref={dropdownRef} className="relative">
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={showDateDropdown}
-                  className="flex min-w-[220px] items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-medium shadow-sm transition-colors hover:bg-muted/60"
-                  onClick={() => setShowDateDropdown((current) => !current)}
+              <label className="relative block min-w-[220px]">
+                <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <select
+                  aria-label="Date range"
+                  className="w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-10 pr-10 text-sm font-medium shadow-sm outline-none transition-colors hover:bg-muted/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  value={dateRange}
+                  onChange={(event) => setDateRange(event.target.value as DateRange)}
                 >
-                  <span className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {selectedRange.label}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showDateDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showDateDropdown && (
-                  <div
-                    role="listbox"
-                    className="absolute left-0 z-30 mt-2 max-h-72 min-w-[260px] overflow-y-auto rounded-2xl border border-border bg-popover p-2 shadow-2xl shadow-slate-900/10"
-                  >
-                    {DATE_RANGE_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="option"
-                        aria-selected={dateRange === option.value}
-                        className={`flex w-full flex-col rounded-xl px-3 py-3 text-left transition-colors ${
-                          dateRange === option.value
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-foreground hover:bg-muted/60'
-                        }`}
-                        onClick={() => {
-                          setDateRange(option.value)
-                          setShowDateDropdown(false)
-                        }}
-                      >
-                        <span className="font-medium">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  {DATE_RANGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
               <Button
                 onClick={handleSync}
