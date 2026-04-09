@@ -155,6 +155,51 @@ describe('Settings Page', () => {
     expect(await screen.findByText('1 active / 2 total')).toBeInTheDocument()
   })
 
+  it('sorts repos by repo name within active and inactive groups', async () => {
+    mockInitialFetch({
+      repos: [
+        {
+          repo_full_name: 'zeta/beta',
+          description: 'Beta repo',
+          is_active: true,
+          pr_count: 3,
+          last_synced_at: '2026-04-08T10:00:00.000Z',
+        },
+        {
+          repo_full_name: 'alpha/alpha',
+          description: 'Alpha repo',
+          is_active: true,
+          pr_count: 4,
+          last_synced_at: '2026-04-08T10:00:00.000Z',
+        },
+        {
+          repo_full_name: 'aardvark/zeta',
+          description: 'Zeta repo',
+          is_active: false,
+          pr_count: 1,
+          last_synced_at: '2026-04-08T10:00:00.000Z',
+        },
+        {
+          repo_full_name: 'omega/gamma',
+          description: 'Gamma repo',
+          is_active: false,
+          pr_count: 2,
+          last_synced_at: '2026-04-08T10:00:00.000Z',
+        },
+      ],
+    })
+
+    const { container } = render(<SettingsPage />)
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('h3')).toHaveLength(4)
+    })
+
+    const headings = Array.from(container.querySelectorAll('h3')).map((node) => node.textContent)
+
+    expect(headings).toEqual(['alpha', 'beta', 'gamma', 'zeta'])
+  })
+
   it('shows an actionable repositories error state when repo loading fails', async () => {
     mockInitialFetch({ reposOk: false })
 

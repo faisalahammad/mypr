@@ -240,6 +240,14 @@ export default function SettingsPage() {
       if (a.is_active !== b.is_active) {
         return a.is_active ? -1 : 1
       }
+      const [, aRepoName = a.repo_full_name] = a.repo_full_name.split('/')
+      const [, bRepoName = b.repo_full_name] = b.repo_full_name.split('/')
+      const repoNameComparison = aRepoName.localeCompare(bRepoName)
+
+      if (repoNameComparison !== 0) {
+        return repoNameComparison
+      }
+
       return a.repo_full_name.localeCompare(b.repo_full_name)
     })
   }, [repos])
