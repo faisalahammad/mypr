@@ -158,11 +158,11 @@ export async function generateMetadata({ params }: ProfilePageProps) {
   const displayName = profile.display_name || profile.github_username
 
   return {
-    title: `${displayName} (@${profile.github_username}) - PR Portfolio`,
-    description: `View ${displayName}'s pull request portfolio on mypr.pro.bd`,
+    title: `${displayName} (@${profile.github_username}) | MyPR`,
+    description: `View ${displayName}'s pull request portfolio on MyPR.`,
     openGraph: {
-      title: `${displayName} - PR Portfolio`,
-      description: `View ${displayName}'s pull request portfolio on mypr.pro.bd`,
+      title: `${displayName} (@${profile.github_username}) | MyPR`,
+      description: `View ${displayName}'s pull request portfolio on MyPR.`,
       images: profile.github_avatar_url ? [profile.github_avatar_url] : [],
     },
   }

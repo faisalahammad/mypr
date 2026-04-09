@@ -20,8 +20,50 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "mypr.pro.bd",
-  description: "A public portfolio for your merged pull requests.",
+  metadataBase: new URL("https://mypr.pro.bd"),
+  title: {
+    default: "MyPR",
+    template: "%s | MyPR",
+  },
+  description: "MyPR helps developers turn merged pull requests into a public portfolio they can share anywhere.",
+  keywords: [
+    "MyPR",
+    "pull request portfolio",
+    "developer portfolio",
+    "GitHub pull requests",
+    "merged PR timeline",
+    "open source contributions",
+    "engineering portfolio",
+    "shareable PR profile",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "MyPR",
+    description: "MyPR helps developers turn merged pull requests into a public portfolio they can share anywhere.",
+    url: "https://mypr.pro.bd",
+    siteName: "MyPR",
+    type: "website",
+    images: [
+      {
+        url: "/og-placeholder.jpg",
+        width: 1200,
+        height: 630,
+        alt: "MyPR social sharing placeholder image",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MyPR",
+    description: "MyPR helps developers turn merged pull requests into a public portfolio they can share anywhere.",
+    images: ["/og-placeholder.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport: Viewport = {

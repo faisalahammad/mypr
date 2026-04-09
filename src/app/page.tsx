@@ -48,7 +48,7 @@ function LogoMark() {
         </span>
       </div>
       <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
-        mypr.pro.bd
+        MyPR
       </span>
     </div>
   );
