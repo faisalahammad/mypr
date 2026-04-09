@@ -16,12 +16,14 @@ interface FooterProps {
 }
 
 const LANDING_LINKS = [
+  { href: '/about', label: 'About' },
   { href: '#features', label: 'Features' },
   { href: '#how-it-works', label: 'How it works' },
   { href: '#share', label: 'Share' },
 ]
 
 const APP_LINKS = [
+  { href: '/about', label: 'About' },
   { href: '/feed', label: 'Feed' },
   { href: '/settings', label: 'Settings' },
 ]
