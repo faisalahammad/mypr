@@ -378,32 +378,36 @@
   position: relative;
   display: grid;
   gap: 18px;
-  padding-left: 24px;
 }
 
-.timeline::before {
-  content: '';
+.timelineSpine {
   position: absolute;
-  left: 8px;
-  top: 4px;
-  bottom: 4px;
+  left: 12px;
+  top: 0;
+  bottom: 0;
   width: 1px;
   background: var(--border);
 }
 
 .timelineItem {
-  position: relative;
-  padding: 0 0 0 18px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 18px;
+  align-items: stretch;
 }
 
-.timelineItem::before {
-  content: '';
+.timelineRail {
+  position: relative;
+}
+
+.timelineMarker {
   position: absolute;
-  left: -1px;
-  top: 8px;
+  left: 50%;
+  top: 26px;
   width: 10px;
   height: 10px;
   border-radius: 999px;
+  transform: translate(-50%, -50%);
   background: var(--merged);
   border: 2px solid var(--surface);
   box-shadow: 0 0 0 4px rgb(137 87 229 / 0.14);

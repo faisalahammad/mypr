@@ -167,4 +167,18 @@ describe('ProfileResults', () => {
     expect(screen.getByText('@faisalahammad · 4 merged PRs · 2 repos')).toBeInTheDocument()
     expect(screen.queryByText('@faisalahammad · 99 merged PRs · 9 repos')).not.toBeInTheDocument()
   })
+
+  it('renders the timeline preview with a dedicated rail and marker for each entry', () => {
+    const { container } = render(<ProfileResults model={model} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
+
+    const items = container.querySelectorAll('[data-testid="profile-timeline-item"]')
+    const spine = container.querySelector('[data-testid="profile-timeline-spine"]')
+    const markers = container.querySelectorAll('[data-testid="profile-timeline-marker"]')
+
+    expect(items).toHaveLength(model.timeline.length)
+    expect(spine).toBeInTheDocument()
+    expect(markers).toHaveLength(model.timeline.length)
+  })
 })

@@ -193,8 +193,12 @@ export function ProfileResults({ model }: ProfileResultsProps) {
 
             {activeView === 'timeline' && (
               <div className={styles.timeline}>
+                <div className={styles.timelineSpine} data-testid="profile-timeline-spine" aria-hidden="true" />
                 {model.timeline.map((entry) => (
-                  <div key={entry.id} className={styles.timelineItem}>
+                  <div key={entry.id} className={styles.timelineItem} data-testid="profile-timeline-item">
+                    <div className={styles.timelineRail} aria-hidden="true">
+                      <span className={styles.timelineMarker} data-testid="profile-timeline-marker" />
+                    </div>
                     <a href={entry.url} target="_blank" rel="noreferrer" className={styles.timelineCard}>
                       <div className={styles.timelineRepo}>{entry.repoFullName}</div>
                       <div className={styles.timelineTitle}>{entry.title}</div>
