@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock3,
-  Database,
   Eye,
   GitPullRequest,
   RefreshCw,
@@ -83,6 +82,20 @@ function formatDate(iso: string | null) {
   })
 }
 
+function sortReposByName(repoList: CachedRepo[]) {
+  return [...repoList].sort((a, b) => {
+    const [, aRepoName = a.repo_full_name] = a.repo_full_name.split('/')
+    const [, bRepoName = b.repo_full_name] = b.repo_full_name.split('/')
+    const repoNameComparison = aRepoName.localeCompare(bRepoName)
+
+    if (repoNameComparison !== 0) {
+      return repoNameComparison
+    }
+
+    return a.repo_full_name.localeCompare(b.repo_full_name)
+  })
+}
+
 export default function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
@@ -93,6 +106,7 @@ export default function SettingsPage() {
   const [repoError, setRepoError] = useState<string | null>(null)
   const [repoUpdateError, setRepoUpdateError] = useState<string | null>(null)
   const [pendingRepos, setPendingRepos] = useState<Record<string, boolean>>({})
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange>('3m')
 
   const persistedRangeLabel = getRangeLabel(syncInfo?.last_date_range ?? null)
@@ -127,7 +141,7 @@ export default function SettingsPage() {
   }, [])
 
   const handleRepoToggle = async (repoFullName: string, nextValue: boolean) => {
-    if (pendingRepos[repoFullName]) return
+    if (isBulkUpdating || pendingRepos[repoFullName]) return
 
     setRepoUpdateError(null)
     setPendingRepos((current) => ({ ...current, [repoFullName]: true }))
@@ -158,6 +172,69 @@ export default function SettingsPage() {
     } finally {
       setPendingRepos((current) => ({ ...current, [repoFullName]: false }))
     }
+  }
+
+  const handleToggleAllRepos = async (nextValue: boolean) => {
+    if (isBulkUpdating || repos.length === 0) return
+
+    const reposToUpdate = repos.filter((repo) => repo.is_active !== nextValue)
+
+    if (reposToUpdate.length === 0) return
+
+    setRepoUpdateError(null)
+    setIsBulkUpdating(true)
+
+    const previousRepos = repos
+    const previousActiveCount = activeCount
+
+    setPendingRepos((current) => {
+      const nextPending = { ...current }
+      for (const repo of reposToUpdate) {
+        nextPending[repo.repo_full_name] = true
+      }
+      return nextPending
+    })
+
+    setRepos((current) => current.map((repo) => (
+      reposToUpdate.some((candidate) => candidate.repo_full_name === repo.repo_full_name)
+        ? { ...repo, is_active: nextValue }
+        : repo
+    )))
+    setActiveCount(nextValue ? repos.length : 0)
+
+    const results = await Promise.allSettled(
+      reposToUpdate.map(async (repo) => {
+        const response = await fetch('/api/repos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo_full_name: repo.repo_full_name, is_active: nextValue }),
+        })
+        const data = await response.json()
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Failed to update repository')
+        }
+      })
+    )
+
+    const failedUpdates = results.filter((result) => result.status === 'rejected')
+
+    if (failedUpdates.length > 0) {
+      setRepos(previousRepos)
+      setActiveCount(previousActiveCount)
+      setRepoUpdateError(
+        `Failed to update ${failedUpdates.length} repositor${failedUpdates.length === 1 ? 'y' : 'ies'}.`
+      )
+    }
+
+    setPendingRepos((current) => {
+      const nextPending = { ...current }
+      for (const repo of reposToUpdate) {
+        nextPending[repo.repo_full_name] = false
+      }
+      return nextPending
+    })
+    setIsBulkUpdating(false)
   }
 
   const handleSync = async () => {
@@ -204,27 +281,18 @@ export default function SettingsPage() {
 
   const repoStats = useMemo(() => {
     const totalRepos = repos.length
-    const inactiveCount = totalRepos - activeCount
     const totalCachedPRs = repos.reduce((sum, repo) => sum + repo.pr_count, 0)
-    return { totalRepos, inactiveCount, totalCachedPRs }
-  }, [activeCount, repos])
-
-  const sortedRepos = useMemo(() => {
-    return [...repos].sort((a, b) => {
-      if (a.is_active !== b.is_active) {
-        return a.is_active ? -1 : 1
-      }
-      const [, aRepoName = a.repo_full_name] = a.repo_full_name.split('/')
-      const [, bRepoName = b.repo_full_name] = b.repo_full_name.split('/')
-      const repoNameComparison = aRepoName.localeCompare(bRepoName)
-
-      if (repoNameComparison !== 0) {
-        return repoNameComparison
-      }
-
-      return a.repo_full_name.localeCompare(b.repo_full_name)
-    })
+    return { totalRepos, totalCachedPRs }
   }, [repos])
+
+  const groupedRepos = useMemo(() => {
+    const activeRepos = sortReposByName(repos.filter((repo) => repo.is_active))
+    const inactiveRepos = sortReposByName(repos.filter((repo) => !repo.is_active))
+    return { activeRepos, inactiveRepos }
+  }, [repos])
+
+  const allReposEnabled = repoStats.totalRepos > 0 && activeCount === repoStats.totalRepos
+  const enabledReposLabel = `${activeCount} of ${repoStats.totalRepos} enabled`
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(235,71,153,0.12),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.88))]">
@@ -355,9 +423,17 @@ export default function SettingsPage() {
                   Turn on only the repos you want to show on your profile, timeline, and feed. Everything else stays cached privately.
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-                <Database className="h-3.5 w-3.5" />
-                {activeCount} active / {repoStats.totalRepos} total
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                <div className="space-y-1 text-right">
+                  <p className="text-xs font-medium text-muted-foreground">All repositories</p>
+                  <p className="text-xs text-muted-foreground">{enabledReposLabel}</p>
+                </div>
+                <Switch
+                  aria-label="Toggle all repositories"
+                  checked={allReposEnabled}
+                  disabled={isBulkUpdating || isLoadingRepos || !!repoError || repoStats.totalRepos === 0}
+                  onCheckedChange={handleToggleAllRepos}
+                />
               </div>
             </div>
 
@@ -400,72 +476,102 @@ export default function SettingsPage() {
             )}
 
             {!isLoadingRepos && !repoError && repos.length > 0 && (
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {sortedRepos.map((repo) => {
-                  const [owner, name] = repo.repo_full_name.split('/')
-                  const isPending = pendingRepos[repo.repo_full_name]
+              <div className="mt-5 space-y-6">
+                {[
+                  {
+                    title: 'Active repositories',
+                    repos: groupedRepos.activeRepos,
+                  },
+                  {
+                    title: 'Inactive repositories',
+                    repos: groupedRepos.inactiveRepos,
+                  },
+                ].map((group) => {
+                  if (group.repos.length === 0) return null
 
                   return (
-                    <div
-                      key={repo.repo_full_name}
-                      className={`rounded-3xl border p-4 transition-all ${
-                        repo.is_active
-                          ? 'border-primary/30 bg-primary/5 shadow-sm shadow-primary/10'
-                          : 'border-border/80 bg-background/85'
-                      }`}
-                    >
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <Avatar className="h-9 w-9 shrink-0">
-                              <AvatarImage src={repo.owner_avatar_url ?? undefined} alt={owner} />
-                              <AvatarFallback className="text-xs">{owner.slice(0, 2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="hidden rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                                  {owner}
-                                </span>
-                                <h3 className="text-base font-semibold text-foreground">{name}</h3>
-                              </div>
-                              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                {repo.description || 'No description available.'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-background/90 px-3 py-2">
-                            <Switch
-                              aria-label={`Toggle repository ${repo.repo_full_name}`}
-                              checked={repo.is_active}
-                              disabled={isPending}
-                              onCheckedChange={(checked) => handleRepoToggle(repo.repo_full_name, checked)}
-                            />
-                          </div>
+                    <section key={group.title} className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            {group.title}
+                          </h3>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {group.repos.length} repo{group.repos.length === 1 ? '' : 's'}
+                          </p>
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
-                            <GitPullRequest className="h-3.5 w-3.5 text-primary" />
-                            <strong className="text-foreground">{repo.pr_count}</strong> merged PR{repo.pr_count !== 1 ? 's' : ''}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
-                            <Clock3 className="h-3.5 w-3.5" />
-                            {formatDate(repo.last_synced_at)}
-                          </span>
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${
-                            repo.is_active ? 'bg-primary/12 text-primary' : 'bg-muted/70 text-muted-foreground'
-                          }`}>
-                            <Eye className="h-3.5 w-3.5" />
-                            {repo.is_active ? 'Public' : 'Private'}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Hidden from public profile — toggle to show'}
-                        </p>
                       </div>
-                    </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {group.repos.map((repo) => {
+                          const [owner, name] = repo.repo_full_name.split('/')
+                          const isPending = isBulkUpdating || pendingRepos[repo.repo_full_name]
+
+                          return (
+                            <div
+                              key={repo.repo_full_name}
+                              className={`rounded-3xl border p-4 transition-all ${
+                                repo.is_active
+                                  ? 'border-primary/30 bg-primary/5 shadow-sm shadow-primary/10'
+                                  : 'border-border/80 bg-background/85'
+                              }`}
+                            >
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex min-w-0 items-start gap-3">
+                                    <Avatar className="h-9 w-9 shrink-0">
+                                      <AvatarImage src={repo.owner_avatar_url ?? undefined} alt={owner} />
+                                      <AvatarFallback className="text-xs">{owner.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="hidden rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                                          {owner}
+                                        </span>
+                                        <h4 className="text-base font-semibold text-foreground">{name}</h4>
+                                      </div>
+                                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                        {repo.description || 'No description available.'}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-background/90 px-3 py-2">
+                                    <Switch
+                                      aria-label={`Toggle repository ${repo.repo_full_name}`}
+                                      checked={repo.is_active}
+                                      disabled={isPending}
+                                      onCheckedChange={(checked) => handleRepoToggle(repo.repo_full_name, checked)}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
+                                    <GitPullRequest className="h-3.5 w-3.5 text-primary" />
+                                    <strong className="text-foreground">{repo.pr_count}</strong> merged PR{repo.pr_count !== 1 ? 's' : ''}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    {formatDate(repo.last_synced_at)}
+                                  </span>
+                                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${
+                                    repo.is_active ? 'bg-primary/12 text-primary' : 'bg-muted/70 text-muted-foreground'
+                                  }`}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                    {repo.is_active ? 'Public' : 'Private'}
+                                  </span>
+                                </div>
+
+                                <p className="text-xs text-muted-foreground">
+                                  {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Hidden from public profile — toggle to show'}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </section>
                   )
                 })}
               </div>

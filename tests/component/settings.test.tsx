@@ -34,6 +34,21 @@ const mockSyncInfo = {
   total_prs: 10,
 }
 
+function getSectionRepoHeadings(sectionHeading: string) {
+  const heading = screen.getByRole('heading', { level: 3, name: sectionHeading })
+  const section = heading.closest('section')
+
+  if (!section) {
+    throw new Error(`Unable to find section container for ${sectionHeading}`)
+  }
+
+  return Array.from(section.querySelectorAll('h4')).map((node) => node.textContent)
+}
+
+function expectEnabledCount(text: string) {
+  expect(screen.getByText(text, { selector: 'p' })).toBeInTheDocument()
+}
+
 function mockInitialFetch({
   repos = mockRepos,
   syncInfo = mockSyncInfo,
@@ -147,15 +162,17 @@ describe('Settings Page', () => {
     expect((await screen.findAllByText('Portfolio sync app')).length).toBeGreaterThan(0)
   })
 
-  it('shows the active and total repository count from fetched repos', async () => {
+  it('shows the master visibility switch with enabled count text', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
-    expect(await screen.findByText('1 active / 2 total')).toBeInTheDocument()
+    await screen.findByText('mypr')
+    expectEnabledCount('1 of 2 enabled')
+    expect(screen.getByRole('switch', { name: /toggle all repositories/i })).toBeInTheDocument()
   })
 
-  it('sorts repos by repo name within active and inactive groups', async () => {
+  it('renders active and inactive sections sorted alphabetically by repo name', async () => {
     mockInitialFetch({
       repos: [
         {
@@ -189,15 +206,12 @@ describe('Settings Page', () => {
       ],
     })
 
-    const { container } = render(<SettingsPage />)
+    render(<SettingsPage />)
 
-    await waitFor(() => {
-      expect(container.querySelectorAll('h3')).toHaveLength(4)
-    })
-
-    const headings = Array.from(container.querySelectorAll('h3')).map((node) => node.textContent)
-
-    expect(headings).toEqual(['alpha', 'beta', 'gamma', 'zeta'])
+    expect(await screen.findByRole('heading', { level: 3, name: 'Active repositories' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: 'Inactive repositories' })).toBeInTheDocument()
+    expect(getSectionRepoHeadings('Active repositories')).toEqual(['alpha', 'beta'])
+    expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['gamma', 'zeta'])
   })
 
   it('shows an actionable repositories error state when repo loading fails', async () => {
@@ -232,7 +246,7 @@ describe('Settings Page', () => {
     })
   })
 
-  it('optimistically toggles a repository and updates the active count', async () => {
+  it('optimistically toggles a repository, moves it between sections, and updates the enabled count', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
@@ -242,7 +256,65 @@ describe('Settings Page', () => {
     fireEvent.click(toggle)
 
     await waitFor(() => {
-      expect(screen.getByText('2 active / 2 total')).toBeInTheDocument()
+      expectEnabledCount('2 of 2 enabled')
+      expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
+      expect(screen.queryByRole('heading', { level: 3, name: 'Inactive repositories' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('enables every repository from the master switch', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    const masterToggle = await screen.findByRole('switch', { name: /toggle all repositories/i })
+
+    fireEvent.click(masterToggle)
+
+    await waitFor(() => {
+      expectEnabledCount('2 of 2 enabled')
+      expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
+    })
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/repos',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ repo_full_name: 'faisal/private-repo', is_active: true }),
+      })
+    )
+  })
+
+  it('disables every repository from the master switch when all are enabled', async () => {
+    mockInitialFetch({
+      repos: [
+        {
+          repo_full_name: 'faisal/mypr',
+          description: 'Portfolio sync app',
+          is_active: true,
+          pr_count: 8,
+          last_synced_at: '2026-04-08T10:00:00.000Z',
+        },
+        {
+          repo_full_name: 'faisal/private-repo',
+          description: null,
+          is_active: true,
+          pr_count: 2,
+          last_synced_at: '2026-04-08T10:00:00.000Z',
+        },
+      ],
+    })
+
+    render(<SettingsPage />)
+
+    const masterToggle = await screen.findByRole('switch', { name: /toggle all repositories/i })
+
+    fireEvent.click(masterToggle)
+
+    await waitFor(() => {
+      expectEnabledCount('0 of 2 enabled')
+      expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['mypr', 'private-repo'])
+      expect(screen.queryByRole('heading', { level: 3, name: 'Active repositories' })).not.toBeInTheDocument()
     })
   })
 
@@ -269,7 +341,28 @@ describe('Settings Page', () => {
       expect(screen.getByText(/failed to update repository/i)).toBeInTheDocument()
     })
 
-    expect(screen.getByText('1 active / 2 total')).toBeInTheDocument()
+    expectEnabledCount('1 of 2 enabled')
+    expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr'])
+    expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['private-repo'])
+  })
+
+  it('rolls back bulk repository state when the master toggle request fails', async () => {
+    mockInitialFetch({ toggleOk: false })
+
+    render(<SettingsPage />)
+
+    await screen.findByText('mypr')
+    const masterToggle = await screen.findByRole('switch', { name: /toggle all repositories/i })
+
+    fireEvent.click(masterToggle)
+
+    await waitFor(() => {
+      expect(screen.getByText(/failed to update 1 (repository|repositories)/i)).toBeInTheDocument()
+    })
+
+    expectEnabledCount('1 of 2 enabled')
+    expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr'])
+    expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['private-repo'])
   })
 
   it('supports selecting the 24 month and lifetime options', async () => {
