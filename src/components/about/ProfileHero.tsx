@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react'
+import { Mail, MapPin } from 'lucide-react'
 
 function GitHubIcon() {
   return (
@@ -33,6 +33,11 @@ function XIcon() {
 }
 
 const SOCIAL_LINKS = [
+  {
+    href: 'mailto:faisalahammad24@gmail.com',
+    label: 'Email',
+    icon: <Mail className="h-4 w-4" aria-hidden="true" />,
+  },
   {
     href: 'https://github.com/faisalahammad',
     label: 'GitHub',
@@ -76,7 +81,7 @@ export function ProfileHero() {
               Faisal Ahammad
             </h1>
             <p className="text-lg font-medium text-foreground">
-              WordPress Engineer &amp; Open Source Contributor
+              Customer Support Engineer &amp; Open Source Contributor
             </p>
             <address className="flex items-center gap-2 text-sm not-italic text-muted-foreground">
               <MapPin className="h-4 w-4" aria-hidden="true" />
@@ -84,12 +89,23 @@ export function ProfileHero() {
             </address>
           </div>
 
-          <p className="text-base leading-relaxed text-foreground">
-            Over a decade in the WordPress ecosystem — supporting, contributing, building, and connecting.
+          <p className="max-w-4xl text-sm leading-7 text-muted-foreground sm:text-base">
+            Faisal Ahammad is a Customer Support Engineer and open source contributor based in Dhaka, Bangladesh.
+            With over ten years in the WordPress ecosystem, he has held support engineering roles at SiteCare,
+            OnTheGoSystems, Elegant Themes, and Saturday Drive. He has contributed code to WordPress Core across
+            multiple versions, merged pull requests into widely-used plugins, organised and spoken at WordCamps, and
+            built and published his own plugins on WordPress.org. He was awarded the Yoast Care Fund in 2025 for his
+            contributions to the WordPress community. He created mypr.pro.bd to give open source contributors a better
+            way to document and share their work.
           </p>
 
           <p className="max-w-4xl text-sm leading-7 text-muted-foreground sm:text-base">
-            Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh. With over ten years in the WordPress ecosystem, he has held engineering and support roles at some of the most recognised WordPress product companies in the world, including Elegant Themes, OnTheGoSystems, Saturday Drive, and SiteCare. He has contributed code to WordPress Core across multiple versions, merged pull requests into widely-used plugins, organised and spoken at WordCamps, and built and published his own plugins on WordPress.org. He created MyPR to give open source contributors a better way to document and share their work.
+            Faisal is transforming from a front-line support engineer into a Tier 3 support specialist, one who helps
+            customers resolve issues faster by applying AI to the support workflow. Rather than turning customers away
+            with &quot;that&apos;s out of scope,&quot; he takes a closer look at the problem and finds a solution:
+            producing workarounds, writing custom code snippets, submitting patches, extending core plugin
+            functionality, and developing add-on plugins where none exist. The goal is to make customers feel
+            confident using the plugin without needing to switch to something else.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-1">

@@ -11,8 +11,9 @@ import { WordCampSection } from '@/components/about/WordCampSection'
 import { getUserProfile } from '@/lib/supabase'
 
 export const metadata: Metadata = {
-  title: 'About Faisal Ahammad — WordPress Engineer & Open Source Contributor',
-  description: 'Faisal Ahammad is a WordPress support engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Creator of MyPR.',
+  title: 'About Faisal Ahammad — Customer Support Engineer & Open Source Contributor',
+  description:
+    'Faisal Ahammad is a Customer Support Engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Awarded the Yoast Care Fund 2025. Creator of mypr.pro.bd.',
   keywords: [
     'Faisal Ahammad',
     'Faisal Ahammad WordPress',
@@ -23,10 +24,16 @@ export const metadata: Metadata = {
     'WordPress open source contributor',
     'WordCamp Dhaka',
     'MyPR',
+    'Customer Support Engineer',
+    'Gravity Forms',
+    'Yoast Care Fund',
+    'LifterLMS',
+    'faisalahammad24@gmail.com',
   ],
   openGraph: {
-    title: 'Faisal Ahammad — WordPress Engineer & Open Source Contributor',
-    description: 'Over a decade in the WordPress ecosystem. Support engineer, open source contributor, polyglot, and community speaker.',
+    title: 'Faisal Ahammad — Customer Support Engineer & Open Source Contributor',
+    description:
+      'Faisal Ahammad is a Customer Support Engineer and open source contributor based in Dhaka, Bangladesh, with over a decade of experience in the WordPress ecosystem. Awarded the Yoast Care Fund 2025. Creator of mypr.pro.bd.',
     url: 'https://mypr.pro.bd/about',
     type: 'profile',
   },
@@ -39,13 +46,16 @@ const personSchema = {
   '@context': 'https://schema.org',
   '@type': 'Person',
   name: 'Faisal Ahammad',
-  jobTitle: 'WordPress Support Engineer & Open Source Contributor',
+  jobTitle: 'Customer Support Engineer & Open Source Contributor',
   url: 'https://mypr.pro.bd/about',
   sameAs: [
     'https://github.com/faisalahammad',
     'https://linkedin.com/in/faisalahammad',
     'https://profiles.wordpress.org/faisalahammad',
     'https://twitter.com/faisalahammad',
+    'https://community.gravityforms.com/u/faisalahammad/summary',
+    'https://wordpress.org/photos/author/faisalahammad/',
+    'https://yoast.com/community/care-fund/recipients/faisal-ahammad/',
   ],
   address: {
     '@type': 'PostalAddress',
@@ -53,7 +63,7 @@ const personSchema = {
     addressCountry: 'Bangladesh',
   },
   description:
-    'WordPress support engineer and open source contributor with over a decade of experience in the WordPress ecosystem.',
+    'Customer Support Engineer and open source contributor with over a decade of experience in the WordPress ecosystem.',
   knowsAbout: [
     'WordPress',
     'Open Source',
@@ -179,38 +189,6 @@ export default async function AboutPage() {
                     </p>
                   </article>
                 ))}
-              </div>
-            </section>
-
-            <section aria-labelledby="get-in-touch-heading" className="rounded-2xl border border-border/80 bg-card px-6 py-8 sm:px-8">
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <h2 id="get-in-touch-heading" className="text-3xl font-bold tracking-tight text-foreground">
-                    Get in Touch
-                  </h2>
-                  <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                    Faisal is open to conversations about WordPress, open source, customer support engineering, and anything in between. The best way to reach him is on LinkedIn or GitHub.
-                  </p>
-                </div>
-
-                <address className="flex flex-col gap-3 not-italic sm:flex-row">
-                  <a
-                    href="https://linkedin.com/in/faisalahammad"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                  >
-                    LinkedIn
-                  </a>
-                  <a
-                    href="https://github.com/faisalahammad"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                  >
-                    GitHub
-                  </a>
-                </address>
               </div>
             </section>
           </div>

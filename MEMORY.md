@@ -8,8 +8,23 @@ Paste this file (along with CLAUDE.md) at the start of each new session to resto
 ## Current Status
 
 **Phase:** Feed overhaul complete, back to Phase 10 — Polish and Deploy 🚧
-**Last completed:** Public About page for Faisal Ahammad with footer navigation and SEO metadata (2026-04-09)
+**Last completed:** About page content refresh with live contributions feed and community updates (2026-04-10)
 **Next:** Verify Faisal's social profile URLs before deployment and continue Phase 10 polish
+
+---
+
+## Session Summary (2026-04-10)
+
+### Completed This Session
+- ✅ Updated About page metadata and Person JSON-LD to reflect the Customer Support Engineer positioning and new community links
+- ✅ Rewrote the About hero copy, social links, work history, WordPress Core contribution summary, and community/speaking section
+- ✅ Added a new public `src/app/api/about/contributions/route.ts` route backed by the Supabase service role client with fallback static data and daily cache headers
+- ✅ Added `src/components/about/LiveContributions.tsx` to fetch and render merged PR contribution totals dynamically from `mypr.pro.bd`
+- ✅ Removed the About page "Get in Touch" section while keeping Published Plugins, Current Projects, and the footer About link unchanged
+
+### Verification
+- `npm test -- tests/unit/about-page.test.tsx tests/component/about-components.test.tsx`
+- `npm run build`
 
 ---
 
