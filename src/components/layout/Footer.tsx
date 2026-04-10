@@ -63,15 +63,6 @@ export default function Footer({ isLandingPage = false }: FooterProps) {
           <p className="font-mono text-xs text-muted-foreground">
             Built for open source contributors.
           </p>
-          <a
-            href="https://github.com/faisalahammad/mypr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="GitHub repository"
-          >
-            <GitHubIcon />
-          </a>
         </div>
       </AppShell>
     </footer>
