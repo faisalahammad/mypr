@@ -101,7 +101,6 @@ export default function SettingsPage() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
   const [syncInfo, setSyncInfo] = useState<SyncResponse | null>(null)
   const [repos, setRepos] = useState<CachedRepo[]>([])
-  const [activeCount, setActiveCount] = useState(0)
   const [isLoadingRepos, setIsLoadingRepos] = useState(true)
   const [repoError, setRepoError] = useState<string | null>(null)
   const [repoUpdateError, setRepoUpdateError] = useState<string | null>(null)
@@ -132,7 +131,6 @@ export default function SettingsPage() {
         throw new Error(data.message || 'Unable to load repositories')
       }
       setRepos(data.repos)
-      setActiveCount(data.active_count)
     } catch (error) {
       setRepoError(error instanceof Error ? error.message : 'Unable to load repositories')
     } finally {
@@ -147,13 +145,11 @@ export default function SettingsPage() {
     setPendingRepos((current) => ({ ...current, [repoFullName]: true }))
 
     const previousRepos = repos
-    const previousActiveCount = activeCount
     setRepos(repos.map((repo) => (
       repo.repo_full_name === repoFullName
         ? { ...repo, is_active: nextValue }
         : repo
     )))
-    setActiveCount((current) => current + (nextValue ? 1 : -1))
 
     try {
       const response = await fetch('/api/repos', {
@@ -167,7 +163,6 @@ export default function SettingsPage() {
       }
     } catch (error) {
       setRepos(previousRepos)
-      setActiveCount(previousActiveCount)
       setRepoUpdateError(error instanceof Error ? error.message : 'Failed to update repository')
     } finally {
       setPendingRepos((current) => ({ ...current, [repoFullName]: false }))
@@ -185,7 +180,6 @@ export default function SettingsPage() {
     setIsBulkUpdating(true)
 
     const previousRepos = repos
-    const previousActiveCount = activeCount
 
     setPendingRepos((current) => {
       const nextPending = { ...current }
@@ -200,7 +194,6 @@ export default function SettingsPage() {
         ? { ...repo, is_active: nextValue }
         : repo
     )))
-    setActiveCount(nextValue ? repos.length : 0)
 
     const results = await Promise.allSettled(
       reposToUpdate.map(async (repo) => {
@@ -221,7 +214,6 @@ export default function SettingsPage() {
 
     if (failedUpdates.length > 0) {
       setRepos(previousRepos)
-      setActiveCount(previousActiveCount)
       setRepoUpdateError(
         `Failed to update ${failedUpdates.length} repositor${failedUpdates.length === 1 ? 'y' : 'ies'}.`
       )
@@ -281,8 +273,11 @@ export default function SettingsPage() {
 
   const repoStats = useMemo(() => {
     const totalRepos = repos.length
+    const activeRepos = repos.filter((repo) => repo.is_active)
+    const activeCount = activeRepos.length
     const totalCachedPRs = repos.reduce((sum, repo) => sum + repo.pr_count, 0)
-    return { totalRepos, totalCachedPRs }
+    const publicPRs = activeRepos.reduce((sum, repo) => sum + repo.pr_count, 0)
+    return { totalRepos, activeCount, totalCachedPRs, publicPRs }
   }, [repos])
 
   const groupedRepos = useMemo(() => {
@@ -291,8 +286,8 @@ export default function SettingsPage() {
     return { activeRepos, inactiveRepos }
   }, [repos])
 
-  const allReposEnabled = repoStats.totalRepos > 0 && activeCount === repoStats.totalRepos
-  const enabledReposLabel = `${activeCount} of ${repoStats.totalRepos} enabled`
+  const allReposEnabled = repoStats.totalRepos > 0 && repoStats.activeCount === repoStats.totalRepos
+  const enabledReposLabel = `${repoStats.activeCount} of ${repoStats.totalRepos} enabled`
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(235,71,153,0.12),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.88))]">
@@ -316,12 +311,12 @@ export default function SettingsPage() {
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Cached PRs</p>
-                  <p className="mt-2 text-2xl font-semibold text-foreground">{syncInfo?.total_prs ?? repoStats.totalCachedPRs}</p>
+                  <p className="text-xs font-medium text-muted-foreground">Visible PRs</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">{repoStats.publicPRs}</p>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">Active repos</p>
-                  <p className="mt-2 text-2xl font-semibold text-foreground">{activeCount}</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">{repoStats.activeCount}</p>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">Synced range</p>

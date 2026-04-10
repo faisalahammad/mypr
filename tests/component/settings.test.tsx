@@ -49,6 +49,23 @@ function expectEnabledCount(text: string) {
   expect(screen.getByText(text, { selector: 'p' })).toBeInTheDocument()
 }
 
+function getSummaryCardValue(label: string) {
+  const cardLabel = screen.getByText(label, { selector: 'p' })
+  const card = cardLabel.closest('div')
+
+  if (!card) {
+    throw new Error(`Unable to find summary card for ${label}`)
+  }
+
+  const value = card.querySelectorAll('p')[1]
+
+  if (!value) {
+    throw new Error(`Unable to find summary value for ${label}`)
+  }
+
+  return value.textContent
+}
+
 function mockInitialFetch({
   repos = mockRepos,
   syncInfo = mockSyncInfo,
@@ -172,6 +189,19 @@ describe('Settings Page', () => {
     expect(screen.getByRole('switch', { name: /toggle all repositories/i })).toBeInTheDocument()
   })
 
+  it('shows public-only summary counts in the top cards', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    await screen.findByText('mypr')
+
+    expect(screen.getByText('Visible PRs')).toBeInTheDocument()
+    expect(screen.queryByText('Cached PRs')).not.toBeInTheDocument()
+    expect(getSummaryCardValue('Visible PRs')).toBe('8')
+    expect(getSummaryCardValue('Active repos')).toBe('1')
+  })
+
   it('renders active and inactive sections sorted alphabetically by repo name', async () => {
     mockInitialFetch({
       repos: [
@@ -275,6 +305,8 @@ describe('Settings Page', () => {
       expectEnabledCount('2 of 2 enabled')
       expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
       expect(screen.queryByRole('heading', { level: 3, name: 'Inactive repositories' })).not.toBeInTheDocument()
+      expect(getSummaryCardValue('Visible PRs')).toBe('10')
+      expect(getSummaryCardValue('Active repos')).toBe('2')
     })
   })
 
@@ -290,6 +322,8 @@ describe('Settings Page', () => {
     await waitFor(() => {
       expectEnabledCount('2 of 2 enabled')
       expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
+      expect(getSummaryCardValue('Visible PRs')).toBe('10')
+      expect(getSummaryCardValue('Active repos')).toBe('2')
     })
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -331,6 +365,8 @@ describe('Settings Page', () => {
       expectEnabledCount('0 of 2 enabled')
       expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['mypr', 'private-repo'])
       expect(screen.queryByRole('heading', { level: 3, name: 'Active repositories' })).not.toBeInTheDocument()
+      expect(getSummaryCardValue('Visible PRs')).toBe('0')
+      expect(getSummaryCardValue('Active repos')).toBe('0')
     })
   })
 
