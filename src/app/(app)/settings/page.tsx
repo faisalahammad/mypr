@@ -309,10 +309,14 @@ export default function SettingsPage() {
                 <GitHubMark />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">Visible PRs</p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">{repoStats.publicPRs}</p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Lifetime PRs</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">{repoStats.totalCachedPRs}</p>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">Active repos</p>

@@ -197,8 +197,9 @@ describe('Settings Page', () => {
     await screen.findByText('mypr')
 
     expect(screen.getByText('Visible PRs')).toBeInTheDocument()
-    expect(screen.queryByText('Cached PRs')).not.toBeInTheDocument()
+    expect(screen.getByText('Lifetime PRs')).toBeInTheDocument()
     expect(getSummaryCardValue('Visible PRs')).toBe('8')
+    expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
     expect(getSummaryCardValue('Active repos')).toBe('1')
   })
 
@@ -306,6 +307,7 @@ describe('Settings Page', () => {
       expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
       expect(screen.queryByRole('heading', { level: 3, name: 'Inactive repositories' })).not.toBeInTheDocument()
       expect(getSummaryCardValue('Visible PRs')).toBe('10')
+      expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
       expect(getSummaryCardValue('Active repos')).toBe('2')
     })
   })
@@ -323,6 +325,7 @@ describe('Settings Page', () => {
       expectEnabledCount('2 of 2 enabled')
       expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
       expect(getSummaryCardValue('Visible PRs')).toBe('10')
+      expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
       expect(getSummaryCardValue('Active repos')).toBe('2')
     })
 
@@ -366,6 +369,7 @@ describe('Settings Page', () => {
       expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['mypr', 'private-repo'])
       expect(screen.queryByRole('heading', { level: 3, name: 'Active repositories' })).not.toBeInTheDocument()
       expect(getSummaryCardValue('Visible PRs')).toBe('0')
+      expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
       expect(getSummaryCardValue('Active repos')).toBe('0')
     })
   })
