@@ -59,9 +59,9 @@ export function getProfileResultsTag(username: string): string {
 }
 
 const previewLabels: Record<ProfileResultsView, string> = {
-  repos: 'mypr — repo-grid.view',
-  summary: 'mypr — summary-stats.view',
-  timeline: 'mypr — timeline.view',
+  repos: 'Repository highlights preview',
+  summary: 'Top repositories snapshot',
+  timeline: 'Contribution timeline preview',
 }
 
 export function getProfileResultsPreviewLabel(view: ProfileResultsView): string {
@@ -148,9 +148,9 @@ export function buildProfileResultsModel({
     },
     timeline,
     shareVariants: [
-      `I just shipped ${mergedPRs} merged PRs across ${repos} repos as @${profile.github_username}. See the work: mypr.pro.bd/${profile.github_username}`,
-      `${mergedPRs} merged PRs. ${repos} repos. A clean little trail of merged work from @${profile.github_username}.`,
-      `PR story for @${profile.github_username}: ${mergedPRs} merged PRs across ${repos} active repos.`,
+      `A lot of my recent work shipped through open source: ${mergedPRs} merged PRs across ${repos} repos. See the work: mypr.pro.bd/${profile.github_username}`,
+      `From fixes to shipped features, I’ve merged ${mergedPRs} PRs across ${repos} repos lately. See the work: mypr.pro.bd/${profile.github_username}`,
+      `Here’s a snapshot of what I’ve been building in public: ${mergedPRs} merged PRs across ${repos} repos as @${profile.github_username}. See the work: mypr.pro.bd/${profile.github_username}`,
     ],
   }
 }

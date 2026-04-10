@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 import type { FeedPR, ReactionCounts, ReactionType } from '@/lib/feed'
 import { ReactionBar } from './ReactionBar'
 
@@ -73,9 +74,66 @@ function applyOptimisticReaction(
   }
 }
 
+interface DescriptionSegment {
+  text: string
+  isCode: boolean
+}
+
+function normalizeMarkdownSummary(summary: string): string {
+  return summary
+    .replace(/\r\n/g, '\n')
+    .replace(/```+/g, '')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+    .split('\n')
+    .map((line) => line.replace(/^\s{0,3}(?:#{1,6}\s+|>\s+|[-+*]\s+|\d+\.\s+|\[[ xX]\]\s+)/, '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function tokenizeDescription(summary: string): DescriptionSegment[] {
+  return normalizeMarkdownSummary(summary)
+    .split(/(`[^`]+`)/)
+    .filter(Boolean)
+    .map((segment) => {
+      const isCode = segment.startsWith('`') && segment.endsWith('`')
+      return {
+        text: isCode ? segment.slice(1, -1) : segment,
+        isCode,
+      }
+    })
+}
+
+function truncateDescriptionSegments(segments: DescriptionSegment[], maxLength: number): DescriptionSegment[] {
+  const truncated: DescriptionSegment[] = []
+  let remaining = maxLength
+
+  for (const segment of segments) {
+    if (remaining <= 0) break
+
+    if (segment.text.length <= remaining) {
+      truncated.push(segment)
+      remaining -= segment.text.length
+      continue
+    }
+
+    truncated.push({
+      ...segment,
+      text: `${segment.text.slice(0, remaining).trimEnd()}...`,
+    })
+    remaining = 0
+  }
+
+  return truncated
+}
+
 export function PRFeedCard({ pr }: PRFeedCardProps) {
   const [reactionCounts, setReactionCounts] = useState<ReactionCounts>(pr.reaction_counts)
   const [userReaction, setUserReaction] = useState<ReactionType | null>(pr.user_reaction)
+  const descriptionSegments = pr.body_summary
+    ? truncateDescriptionSegments(tokenizeDescription(pr.body_summary), 220)
+    : null
 
   const handleReact = async (reactionType: ReactionType) => {
     const previousCounts = reactionCounts
@@ -152,13 +210,25 @@ export function PRFeedCard({ pr }: PRFeedCardProps) {
           href={pr.pr_url}
           target="_blank"
           rel="noreferrer"
-          className="block text-base font-medium text-foreground hover:underline"
+          className="inline-flex items-start gap-2 text-base font-medium text-foreground hover:underline"
         >
-          {pr.title}
+          <span>{pr.title}</span>
+          <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </a>
-        {pr.body_summary ? (
-          <p className="line-clamp-3 max-w-2xl text-sm text-muted-foreground">
-            {pr.body_summary.length > 120 ? `${pr.body_summary.slice(0, 120)}...` : pr.body_summary}
+        {descriptionSegments ? (
+          <p className="line-clamp-4 text-sm leading-6 text-muted-foreground">
+            {descriptionSegments.map((segment, index) => (
+              segment.isCode ? (
+                <code
+                  key={`${segment.text}-${index}`}
+                  className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.82em] text-foreground"
+                >
+                  {segment.text}
+                </code>
+              ) : (
+                <span key={`${segment.text}-${index}`}>{segment.text}</span>
+              )
+            ))}
           </p>
         ) : null}
         <p className="flex flex-wrap items-center gap-1.5 font-mono text-xs">

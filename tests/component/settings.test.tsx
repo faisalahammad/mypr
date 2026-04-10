@@ -214,6 +214,22 @@ describe('Settings Page', () => {
     expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['gamma', 'zeta'])
   })
 
+  it('uses stronger styling for repository section headings and repo counts', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    const activeHeading = await screen.findByRole('heading', { level: 3, name: 'Active repositories' })
+    const activeSection = activeHeading.closest('section')
+    const activeCount = activeSection?.querySelector('p')
+
+    expect(activeHeading.className).toContain('text-base')
+    expect(activeHeading.className).toContain('text-foreground')
+    expect(activeCount?.textContent).toBe('1 repo')
+    expect(activeCount?.className).toContain('text-sm')
+    expect(activeCount?.className).toContain('text-foreground/80')
+  })
+
   it('shows an actionable repositories error state when repo loading fails', async () => {
     mockInitialFetch({ reposOk: false })
 

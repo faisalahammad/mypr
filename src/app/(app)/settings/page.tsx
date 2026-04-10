@@ -493,10 +493,10 @@ export default function SettingsPage() {
                     <section key={group.title} className="space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          <h3 className="text-base font-bold uppercase tracking-[0.16em] text-foreground">
                             {group.title}
                           </h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="mt-1 text-sm font-medium text-foreground/80">
                             {group.repos.length} repo{group.repos.length === 1 ? '' : 's'}
                           </p>
                         </div>

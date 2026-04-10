@@ -77,9 +77,9 @@ const model: ProfileResultsModel = {
     },
   ],
   shareVariants: [
-    'I just shipped 4 merged PRs across 2 repos. See the work: mypr.pro.bd/faisalahammad',
-    '4 merged PRs. 2 repos. A clean little trail of merged work from @faisalahammad.',
-    'PR story for @faisalahammad: 4 merged PRs across 2 active repos.',
+    'A lot of my recent work shipped through open source: 4 merged PRs across 2 repos. See the work: mypr.pro.bd/faisalahammad',
+    'From fixes to shipped features, I’ve merged 4 PRs across 2 repos lately. See the work: mypr.pro.bd/faisalahammad',
+    'Here’s a snapshot of what I’ve been building in public: 4 merged PRs across 2 repos as @faisalahammad. See the work: mypr.pro.bd/faisalahammad',
   ],
 }
 
@@ -106,18 +106,29 @@ describe('ProfileResults', () => {
 
     expect(screen.getByRole('button', { name: /summary stats/i })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Top Repositories')).toBeInTheDocument()
-    expect(screen.getByText('mypr — summary-stats.view')).toBeInTheDocument()
+    expect(screen.getByText('Top repositories snapshot')).toBeInTheDocument()
   })
 
   it('opens the tweet modal and copies a selected variant', async () => {
     render(<ProfileResults model={model} />)
 
     fireEvent.click(screen.getByRole('button', { name: /tweet this/i }))
+    expect(screen.getAllByText(/See the work: mypr.pro.bd\/faisalahammad/i)).toHaveLength(3)
     fireEvent.click(screen.getByRole('button', { name: /copy tweet variant 2/i }))
 
     await waitFor(() => {
       expect(mockWriteText).toHaveBeenCalledWith(model.shareVariants[1])
     })
+  })
+
+  it('shows more contextual tweet copy in the share modal', () => {
+    render(<ProfileResults model={model} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /tweet this/i }))
+
+    expect(screen.getByText(/recent work shipped through open source/i)).toBeInTheDocument()
+    expect(screen.getByText(/From fixes to shipped features/i)).toBeInTheDocument()
+    expect(screen.getByText(/building in public/i)).toBeInTheDocument()
   })
 
   it('captures only the preview card when taking a screenshot', async () => {
@@ -180,5 +191,15 @@ describe('ProfileResults', () => {
     expect(items).toHaveLength(model.timeline.length)
     expect(spine).toBeInTheDocument()
     expect(markers).toHaveLength(model.timeline.length)
+  })
+
+  it('uses more meaningful preview labels across the three result tabs', () => {
+    render(<ProfileResults model={model} />)
+
+    expect(screen.getByText('Repository highlights preview')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /summary stats/i }))
+    expect(screen.getByText('Top repositories snapshot')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
+    expect(screen.getByText('Contribution timeline preview')).toBeInTheDocument()
   })
 })

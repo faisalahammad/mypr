@@ -114,8 +114,12 @@ describe('buildProfileResultsModel', () => {
     })
 
     expect(result.shareVariants).toHaveLength(3)
-    expect(result.shareVariants[0]).toContain('@faisalahammad')
+    expect(result.shareVariants[0]).toContain('See the work: mypr.pro.bd/faisalahammad')
     expect(result.shareVariants[0]).toContain('3 merged PRs')
     expect(result.shareVariants[0]).toContain('2 repos')
+    expect(result.shareVariants[0]).toContain('recent work shipped through open source')
+    expect(result.shareVariants[1]).toContain('From fixes to shipped features')
+    expect(result.shareVariants[2]).toContain('building in public')
+    expect(result.shareVariants.every((variant) => variant.includes('See the work: mypr.pro.bd/faisalahammad'))).toBe(true)
   })
 })

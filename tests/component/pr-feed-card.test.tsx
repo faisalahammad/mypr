@@ -3,12 +3,28 @@ import { render, screen } from '@testing-library/react'
 import { PRFeedCard } from '@/components/feed/PRFeedCard'
 import type { FeedPR } from '@/lib/feed'
 
+jest.mock('lucide-react', () => ({
+  ExternalLink: function ExternalLink() {
+    return <span data-testid="external-link-icon">↗</span>
+  },
+}))
+
 jest.mock('next/link', () => {
-  return ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  )
+  return function MockNextLink({
+    children,
+    href,
+    className,
+  }: {
+    children: React.ReactNode
+    href: string
+    className?: string
+  }) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    )
+  }
 })
 
 jest.mock('@/components/feed/ReactionBar', () => ({
@@ -58,5 +74,46 @@ describe('PRFeedCard', () => {
     expect(screen.getByText('−1').className).toContain('text-red-600')
     expect(screen.getByText('4 commits').className).toContain('text-foreground')
     expect(container.querySelector('.font-mono')).not.toBeNull()
+  })
+
+  it('renders an external link icon next to the PR title link', () => {
+    render(<PRFeedCard pr={feedPR} currentUserId="user-1" />)
+
+    expect(screen.getByTestId('external-link-icon')).toBeInTheDocument()
+  })
+
+  it('cleans markdown noise and preserves inline code styling in the PR description', () => {
+    render(
+      <PRFeedCard
+        pr={{
+          ...feedPR,
+          body_summary:
+            '## Add `.claude/settings.local.json` to `.gitignore`\n\nThis prevents local Claude Code configuration from leaking.',
+        }}
+        currentUserId="user-1"
+      />
+    )
+
+    expect(screen.queryByText('##')).not.toBeInTheDocument()
+    expect(screen.getByText('Add')).toBeInTheDocument()
+    expect(screen.getByText('.claude/settings.local.json')).toBeInTheDocument()
+    expect(screen.getByText('.gitignore')).toBeInTheDocument()
+    expect(screen.getByText('.claude/settings.local.json').tagName).toBe('CODE')
+  })
+
+  it('shows longer descriptions without the max-w-2xl constraint', () => {
+    render(
+      <PRFeedCard
+        pr={{
+          ...feedPR,
+          body_summary:
+            'Add `.claude/settings.local.json` to `.gitignore` This prevents local Claude Code configuration including API tokens from leaking into the repository and keeps developer-specific settings out of commits.',
+        }}
+        currentUserId="user-1"
+      />
+    )
+
+    const description = screen.getByText(/This prevents local Claude Code configuration/i).closest('p')
+    expect(description?.className).not.toContain('max-w-2xl')
   })
 })
