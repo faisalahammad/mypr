@@ -134,10 +134,14 @@
   color: #fff;
 }
 
+.copyUrlsButton {
+  background: linear-gradient(135deg, #059669, #3fb950);
+  color: #fff;
+}
+
 .downloadButton {
-  background: rgb(255 255 255 / 0.92);
-  color: var(--text);
-  border-color: var(--border);
+  background: linear-gradient(135deg, #7c3aed, #c084fc);
+  color: #fff;
 }
 
 .styleTabs {
@@ -158,9 +162,9 @@
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--text2);
+  color: var(--text3);
   transition: all 0.2s ease;
 }
 
@@ -168,6 +172,7 @@
   background: white;
   color: var(--text);
   box-shadow: 0 8px 20px rgb(15 23 42 / 0.08);
+  border-color: var(--border);
 }
 
 .previewCard {

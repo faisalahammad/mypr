@@ -113,13 +113,69 @@ describe('buildProfileResultsModel', () => {
       contributedRepos: 2,
     })
 
-    expect(result.shareVariants).toHaveLength(3)
-    expect(result.shareVariants[0]).toContain('See the work: mypr.pro.bd/faisalahammad')
-    expect(result.shareVariants[0]).toContain('3 merged PRs')
-    expect(result.shareVariants[0]).toContain('2 repos')
-    expect(result.shareVariants[0]).toContain('recent work shipped through open source')
-    expect(result.shareVariants[1]).toContain('From fixes to shipped features')
-    expect(result.shareVariants[2]).toContain('building in public')
+    expect(result.shareVariants.length).toBeGreaterThanOrEqual(3)
+    expect(result.shareVariants.length).toBeLessThanOrEqual(6)
     expect(result.shareVariants.every((variant) => variant.includes('See the work: mypr.pro.bd/faisalahammad'))).toBe(true)
+    expect(result.shareVariants.every((variant) => variant.length <= 280)).toBe(true)
+    expect(result.shareVariants.some((variant) => variant.includes('vercel/next.js'))).toBe(true)
+    expect(result.shareVariants.some((variant) => variant.includes('Fix metadata edge case'))).toBe(true)
+  })
+
+  it('adapts share variants for a single-repo profile', () => {
+    const singleRepoPRs = prs.filter((pr) => pr.repo_full_name === 'vercel/next.js')
+    const result = buildProfileResultsModel({
+      profile,
+      prs: singleRepoPRs,
+      contributedRepos: 1,
+    })
+
+    expect(result.shareVariants.every((variant) => variant.length <= 280)).toBe(true)
+    expect(result.shareVariants.some((variant) => variant.includes('vercel/next.js'))).toBe(true)
+    expect(result.shareVariants.every((variant) => variant.includes('See the work: mypr.pro.bd/faisalahammad'))).toBe(true)
+  })
+
+  it('adapts share variants for a single-PR profile', () => {
+    const singlePR = [prs[0]]
+    const result = buildProfileResultsModel({
+      profile,
+      prs: singlePR,
+      contributedRepos: 1,
+    })
+
+    expect(result.shareVariants.every((variant) => variant.length <= 280)).toBe(true)
+    expect(result.shareVariants.some((variant) => variant.includes('first PR'))).toBe(true)
+    expect(result.shareVariants.some((variant) => variant.includes('Improve caching docs'))).toBe(true)
+  })
+
+  it('includes a dominant-repo variant when most PRs are in one repo', () => {
+    const dominantPRs = [
+      ...prs.filter((pr) => pr.repo_full_name === 'vercel/next.js'),
+      prs[0],
+    ]
+    const result = buildProfileResultsModel({
+      profile,
+      prs: dominantPRs,
+      contributedRepos: 2,
+    })
+
+    expect(result.shareVariants.every((variant) => variant.length <= 280)).toBe(true)
+    expect(result.shareVariants.some((variant) => variant.includes('goes into vercel/next.js'))).toBe(true)
+  })
+
+  it('truncates very long repo names and PR titles gracefully', () => {
+    const longPRs = [
+      {
+        ...prs[0],
+        repo_full_name: 'some-very-long-organization-name/some-very-long-repository-name-that-exceeds-limits',
+        title: 'This is an extremely long pull request title that describes every single detail about the changes made in this contribution and should definitely be truncated',
+      },
+    ]
+    const result = buildProfileResultsModel({
+      profile,
+      prs: longPRs as typeof prs,
+      contributedRepos: 1,
+    })
+
+    expect(result.shareVariants.every((variant) => variant.length <= 280)).toBe(true)
   })
 })

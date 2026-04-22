@@ -58,6 +58,13 @@ export function ProfileResults({ model }: ProfileResultsProps) {
     window.setTimeout(() => setCopyToastVisible(false), 1600)
   }
 
+  const handleCopyAllUrls = async () => {
+    const urls = model.timeline.map((pr) => pr.url).join('\n')
+    await navigator.clipboard.writeText(urls)
+    setCopyToastVisible(true)
+    window.setTimeout(() => setCopyToastVisible(false), 1600)
+  }
+
   return (
     <section className={styles.root} aria-label="Profile results">
       <div className={styles.inner}>
@@ -89,6 +96,13 @@ export function ProfileResults({ model }: ProfileResultsProps) {
               onClick={() => setTweetModalOpen(true)}
             >
               Tweet This
+            </button>
+            <button
+              type="button"
+              className={`${styles.buttonSm} ${styles.copyUrlsButton}`}
+              onClick={handleCopyAllUrls}
+            >
+              Copy URLs
             </button>
             <button
               type="button"

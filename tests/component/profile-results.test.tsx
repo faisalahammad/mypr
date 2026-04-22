@@ -202,4 +202,16 @@ describe('ProfileResults', () => {
     fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
     expect(screen.getByText('Contribution timeline preview')).toBeInTheDocument()
   })
+
+  it('copies all PR URLs when clicking Copy URLs', async () => {
+    render(<ProfileResults model={model} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /copy urls/i }))
+
+    await waitFor(() => {
+      expect(mockWriteText).toHaveBeenCalledWith(
+        model.timeline.map((t) => t.url).join('\n')
+      )
+    })
+  })
 })
