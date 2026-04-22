@@ -505,42 +505,46 @@
 
 .modalBody {
   display: grid;
-  gap: 12px;
-  padding: 20px;
+  gap: 10px;
+  padding: 16px 20px 20px;
 }
 
 .tweetCard {
+  position: relative;
   border: 1px solid var(--border2);
   background: #f8fafc;
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 14px 40px 14px 14px;
 }
 
 .tweetText {
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: pre-wrap;
+  font-size: 0.92rem;
 }
 
-.tweetActions {
-  margin-top: 14px;
+.copyIconButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: flex;
-  justify-content: flex-end;
-}
-
-.copyButton {
-  border: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border2);
   background: white;
-  color: var(--text);
+  color: var(--text2);
   border-radius: var(--radius);
-  padding: 8px 12px;
-  font-weight: 700;
   cursor: pointer;
+  padding: 0;
 }
 
-.copyButton:hover {
-  border-color: rgb(88 166 255 / 0.45);
-  box-shadow: 0 10px 24px rgb(15 23 42 / 0.08);
+.copyIconButton:hover {
+  border-color: rgb(88 166 255 / 0.5);
+  color: var(--accent);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 0.08);
 }
 
 .copiedToast {
