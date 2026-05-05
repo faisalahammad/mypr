@@ -207,16 +207,19 @@ export interface Database {
         Row: {
           user_id: string
           last_date_range: string | null
+          auto_sync_enabled: boolean
           updated_at: string
         }
         Insert: {
           user_id: string
           last_date_range?: string | null
+          auto_sync_enabled?: boolean
           updated_at?: string
         }
         Update: {
           user_id?: string
           last_date_range?: string | null
+          auto_sync_enabled?: boolean
           updated_at?: string
         }
       }

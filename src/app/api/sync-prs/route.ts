@@ -241,20 +241,77 @@ export async function GET(request: NextRequest) {
 
     const { data: syncMeta } = await supabase
       .from('sync_metadata')
-      .select('last_date_range')
+      .select('last_date_range, auto_sync_enabled')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    const typedMeta = syncMeta as { last_date_range: string | null } | null
+    const typedMeta = syncMeta as { last_date_range: string | null; auto_sync_enabled: boolean } | null
 
     return NextResponse.json({
       last_synced: lastSynced,
       total_prs: count || 0,
       last_date_range: typedMeta?.last_date_range ?? null,
+      auto_sync_enabled: typedMeta?.auto_sync_enabled ?? false,
     })
 
   } catch (error) {
     console.error('Sync status error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH endpoint to toggle auto-sync
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = createSupabaseRouteHandlerClient(request)
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError || !session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { auto_sync_enabled } = body
+
+    if (typeof auto_sync_enabled !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Invalid input', message: 'auto_sync_enabled must be a boolean' },
+        { status: 400 }
+      )
+    }
+
+    const serviceClient = createSupabaseServiceClient() as typeof supabase
+
+    const { error } = await serviceClient
+      .from('sync_metadata')
+      .upsert({
+        user_id: session.user.id,
+        auto_sync_enabled,
+        updated_at: new Date().toISOString(),
+      } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
+
+    if (error) {
+      console.error('Error updating auto_sync_enabled:', error)
+      return NextResponse.json(
+        { error: 'Database error', message: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      auto_sync_enabled,
+      message: `Auto-sync ${auto_sync_enabled ? 'enabled' : 'disabled'}`,
+    })
+
+  } catch (error) {
+    console.error('Auto-sync toggle error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
