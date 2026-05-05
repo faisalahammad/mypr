@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase-client'
 import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { AppShell } from '@/components/layout/AppShell'
 
 // For authenticated users — inner page links
@@ -129,11 +131,14 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
 
           {!isAuthenticatedView ? (
             <GitHubLoginButton
-              size="sm"
-              variant="outline"
-              className="hidden md:inline-flex"
+              className={cn(
+                buttonVariants({ size: 'sm' }),
+                'hidden md:inline-flex gap-1.5 gradient-bg text-primary-foreground border-0 hover:opacity-90 rounded-lg px-4 shadow-md shadow-[hsl(262,83%,58%,0.2)]'
+              )}
             >
+              <GitPullRequestArrow className="h-3.5 w-3.5" />
               Get Started
+              <span aria-hidden="true" className="ml-0.5">→</span>
             </GitHubLoginButton>
           ) : (
             <button
@@ -193,10 +198,14 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
           )}
           {!isAuthenticatedView ? (
             <GitHubLoginButton
-              variant="outline"
-              className="w-full justify-center"
+              className={cn(
+                buttonVariants({ size: 'default' }),
+                'w-full justify-center gap-2 gradient-bg text-primary-foreground border-0 hover:opacity-90 rounded-lg px-4 shadow-md shadow-[hsl(262,83%,58%,0.2)]'
+              )}
             >
+              <GitPullRequestArrow className="h-4 w-4" />
               Get Started
+              <span aria-hidden="true" className="ml-0.5">→</span>
             </GitHubLoginButton>
           ) : (
             <button
