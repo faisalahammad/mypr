@@ -89,6 +89,27 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-playfair), Georgia, serif;
   }
+
+  /* Ensure pointer cursor on all interactive elements */
+  a,
+  button,
+  select,
+  summary,
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  label[for],
+  [data-slot="switch"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /* ─── Lovable custom utilities ──────────────────────────────────────────────── */
