@@ -1,8 +1,7 @@
 import { createSupabaseRouteHandlerClient, createSupabaseServiceClient } from '@/lib/supabase'
-import { searchMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
-import { getProfileResultsTag } from '@/lib/profile-results'
+import { syncUserPRs } from '@/lib/sync-user'
+import type { DateRange } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidatePath, revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -57,143 +56,30 @@ export async function POST(request: NextRequest) {
       // No body / invalid JSON - use default
     }
 
-    // Use the GitHub Search API to find all authored merged PRs for the user
-    const reposWithPRs = await searchMergedPRs(
-      typedProfile.github_access_token,
-      typedProfile.github_username,
+    // Delegate to shared sync logic
+    const result = await syncUserPRs(
+      {
+        id: session.user.id,
+        github_username: typedProfile.github_username,
+        github_access_token: typedProfile.github_access_token,
+      },
       dateRange
     )
 
-    if (reposWithPRs.length === 0) {
-      return NextResponse.json({
-        success: true,
-        synced: 0,
-        repos_found: 0,
-        message: 'No merged pull requests found for the selected time range.',
-      })
+    if (result.error) {
+      return NextResponse.json(
+        { error: 'Sync failed', message: result.error },
+        { status: 500 }
+      )
     }
-
-    const serviceClient = createSupabaseServiceClient() as typeof supabase
-    const now = new Date().toISOString()
-    let totalSynced = 0
-
-    for (const repoData of reposWithPRs) {
-      const { repo_full_name, description, owner_avatar_url, prs } = repoData
-
-      // Check if repo already exists to preserve is_active status
-      const { data: existingRepo } = await serviceClient
-        .from('repositories')
-        .select('is_active')
-        .eq('user_id', session.user.id)
-        .eq('repo_full_name', repo_full_name)
-        .maybeSingle<{ is_active: boolean }>()
-
-      // Upsert the repository into our cache with description and PR count
-      // Only set is_active to false for NEW repos, preserve existing value
-      const repoUpsertData = {
-        user_id: session.user.id,
-        repo_full_name,
-        description,
-        owner_avatar_url,
-        pr_count: prs.length,
-        last_synced_at: now,
-        is_active: existingRepo?.is_active ?? false,
-      } as Database['public']['Tables']['repositories']['Insert']
-
-      const { error: repoError } = await serviceClient
-        .from('repositories')
-        .upsert(repoUpsertData as never, {
-          onConflict: 'user_id,repo_full_name',
-        })
-
-      if (repoError) {
-        console.error(`Error upserting repository ${repo_full_name}:`, repoError)
-        continue
-      }
-
-      // Upsert all PRs for this repository
-      const prInsertData = prs.map(pr => ({
-        user_id: session.user.id,
-        repo_full_name: pr.repo_full_name,
-        pr_number: pr.pr_number,
-        title: pr.title,
-        body_summary: getPRSummary(pr.body),
-        pr_url: pr.html_url,
-        merged_at: pr.merged_at,
-        additions: pr.additions,
-        deletions: pr.deletions,
-        commits_count: pr.commits,
-        is_approved: true,
-        synced_at: now,
-      } as Database['public']['Tables']['pull_requests']['Insert']))
-
-      const { error: prsError } = await serviceClient
-        .from('pull_requests')
-        .upsert(prInsertData as never, {
-          onConflict: 'user_id,repo_full_name,pr_number',
-        })
-
-      if (prsError) {
-        console.error(`Error upserting PRs for ${repo_full_name}:`, prsError)
-      } else {
-        totalSynced += prs.length
-      }
-    }
-
-    // Update pr_count for each repo from the database (ensures accuracy after upsert)
-    for (const { repo_full_name } of reposWithPRs) {
-      const { count } = await serviceClient
-        .from('pull_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', session.user.id)
-        .eq('repo_full_name', repo_full_name)
-
-      await serviceClient
-        .from('repositories')
-        .update(({ pr_count: count ?? 0, last_synced_at: now } as Database['public']['Tables']['repositories']['Update']) as never)
-        .eq('user_id', session.user.id)
-        .eq('repo_full_name', repo_full_name)
-    }
-
-    const { error: metaError } = await serviceClient
-      .from('sync_metadata')
-      .upsert({
-        user_id: session.user.id,
-        last_date_range: dateRange,
-        updated_at: now,
-      } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
-
-    if (metaError) {
-      console.error('Error upserting sync metadata:', metaError)
-    }
-
-    const { data: followers } = await serviceClient
-      .from('follows')
-      .select('follower_id')
-      .eq('following_id', session.user.id)
-
-    const cacheInvalidationIds = Array.from(
-      new Set([
-        session.user.id,
-        ...((followers ?? []) as Array<{ follower_id: string }>).map((row) => row.follower_id),
-      ])
-    )
-
-    if (cacheInvalidationIds.length > 0) {
-      await serviceClient
-        .from('feed_cache')
-        .delete()
-        .in('user_id', cacheInvalidationIds)
-    }
-
-    revalidateTag(getProfileResultsTag(typedProfile.github_username), 'max')
-    revalidatePath(`/${typedProfile.github_username}`)
 
     return NextResponse.json({
       success: true,
-      synced: totalSynced,
-      repos_found: reposWithPRs.length,
-      message: `Synced ${totalSynced} merged PR${totalSynced !== 1 ? 's' : ''} across ${reposWithPRs.length} repo${reposWithPRs.length !== 1 ? 's' : ''}`,
+      synced: result.synced,
+      repos_found: result.repos_found,
+      message: result.synced === 0
+        ? 'No merged pull requests found for the selected time range.'
+        : `Synced ${result.synced} merged PR${result.synced !== 1 ? 's' : ''} across ${result.repos_found} repo${result.repos_found !== 1 ? 's' : ''}`,
     })
 
   } catch (error) {
