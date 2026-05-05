@@ -455,7 +455,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-background/90 px-4 py-2.5">
                 <div className="text-right">
                   <p className="text-xs font-medium text-foreground">Auto sync</p>
-                  <p className="text-[11px] text-muted-foreground">Sync hourly</p>
+                  <p className="text-[11px] text-muted-foreground">Sync daily</p>
                 </div>
                 <Switch
                   aria-label="Toggle auto sync"
