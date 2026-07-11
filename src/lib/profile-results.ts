@@ -39,6 +39,18 @@ export interface ProfileResultsModel {
     url: string
     mergedAt: string
   }>
+  timelineByMonth: Array<{
+    key: string
+    label: string
+    entries: Array<{
+      id: string
+      title: string
+      number: number
+      repoFullName: string
+      url: string
+      mergedAt: string
+    }>
+  }>
   shareVariants: string[]
 }
 
@@ -194,6 +206,25 @@ export function buildProfileResultsModel({
   const mergedPRs = prs.length
   const repos = contributedRepos
 
+  const monthGroups = new Map<string, ProfileResultsModel['timelineByMonth'][number]>()
+  for (const entry of timeline) {
+    const mergedDate = new Date(entry.mergedAt)
+    const key = `${mergedDate.getUTCFullYear()}-${String(mergedDate.getUTCMonth() + 1).padStart(2, '0')}`
+    const existing = monthGroups.get(key)
+    if (existing) {
+      existing.entries.push(entry)
+      continue
+    }
+
+    monthGroups.set(key, {
+      key,
+      label: mergedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', timeZone: 'UTC' }),
+      entries: [entry],
+    })
+  }
+
+  const timelineByMonth = Array.from(monthGroups.values())
+
   const model: ProfileResultsModel = {
     identity: {
       avatarUrl: profile.github_avatar_url,
@@ -211,6 +242,7 @@ export function buildProfileResultsModel({
       topRepositories,
     },
     timeline,
+    timelineByMonth,
     shareVariants: [],
   }
 

@@ -104,6 +104,32 @@ describe('buildProfileResultsModel', () => {
       { fullName: 'openai/docs', count: 1 },
     ])
     expect(result.timeline.map((entry) => entry.number)).toEqual([100, 101, 42])
+
+    expect(result.timelineByMonth).toEqual([
+      {
+        key: '2026-04',
+        label: 'April 2026',
+        entries: result.timeline,
+      },
+    ])
+  })
+
+  it('groups timeline entries into separate month buckets in reverse-chronological order', () => {
+    const crossMonthPRs = [
+      { ...prs[0], merged_at: '2026-03-15T10:00:00.000Z' },
+      { ...prs[1], merged_at: '2026-04-08T08:00:00.000Z' },
+      { ...prs[2], merged_at: '2026-04-07T08:00:00.000Z' },
+    ]
+
+    const result = buildProfileResultsModel({
+      profile,
+      prs: crossMonthPRs,
+      contributedRepos: 2,
+    })
+
+    expect(result.timelineByMonth.map((month) => month.key)).toEqual(['2026-04', '2026-03'])
+    expect(result.timelineByMonth[0].entries.map((entry) => entry.number)).toEqual([100, 101])
+    expect(result.timelineByMonth[1].entries.map((entry) => entry.number)).toEqual([42])
   })
 
   it('creates share variants from the same normalized payload', () => {

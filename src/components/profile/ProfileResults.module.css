@@ -290,8 +290,14 @@
 }
 
 .repoListTitle {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 700;
+}
+
+.repoListNumber {
+  color: var(--text2);
+  font-weight: 500;
+  font-family: var(--font-jetbrains-mono), monospace;
 }
 
 .repoListMeta {
@@ -299,6 +305,28 @@
   color: var(--text2);
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.74rem;
+}
+
+.repoExpandButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: #f8fafc;
+  color: var(--text2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.repoExpandButton:hover {
+  border-color: rgb(88 166 255 / 0.45);
+  color: var(--accent);
 }
 
 .summaryView {
@@ -354,7 +382,7 @@
 
 .summaryLeaderboardItem {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: 14px;
   align-items: center;
   padding: 14px 18px;
@@ -388,7 +416,81 @@
   font-size: 0.78rem;
 }
 
+.summaryRepoCopyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border2);
+  background: white;
+  color: var(--text2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 0;
+}
+
+.summaryRepoCopyButton:hover {
+  border-color: rgb(88 166 255 / 0.5);
+  color: var(--accent);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 0.08);
+}
+
 .timeline {
+  display: grid;
+  gap: 28px;
+}
+
+.timelineMonthGroup {
+  display: grid;
+  gap: 14px;
+}
+
+.timelineMonthHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+}
+
+.timelineMonthLabel {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.timelineMonthCopyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border2);
+  background: white;
+  color: var(--text2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.timelineMonthCopyButton:hover {
+  border-color: rgb(88 166 255 / 0.5);
+  color: var(--accent);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 0.08);
+}
+
+.timelineMonthBody {
   position: relative;
   display: grid;
   gap: 18px;

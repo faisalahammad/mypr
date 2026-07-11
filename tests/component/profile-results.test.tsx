@@ -33,11 +33,12 @@ const model: ProfileResultsModel = {
       fullName: 'vercel/next.js',
       name: 'next.js',
       org: 'vercel',
-      pullRequestCount: 3,
+      pullRequestCount: 4,
       pullRequests: [
         { number: 101, title: 'Polish route transitions', url: 'https://github.com/vercel/next.js/pull/101' },
         { number: 100, title: 'Fix metadata edge case', url: 'https://github.com/vercel/next.js/pull/100' },
         { number: 99, title: 'Tune cache tags', url: 'https://github.com/vercel/next.js/pull/99' },
+        { number: 98, title: 'Adjust bundler config', url: 'https://github.com/vercel/next.js/pull/98' },
       ],
     },
     {
@@ -54,7 +55,7 @@ const model: ProfileResultsModel = {
     mergedPRs: 4,
     repos: 2,
     topRepositories: [
-      { fullName: 'vercel/next.js', count: 3 },
+      { fullName: 'vercel/next.js', count: 4 },
       { fullName: 'openai/docs', count: 1 },
     ],
   },
@@ -74,6 +75,30 @@ const model: ProfileResultsModel = {
       repoFullName: 'openai/docs',
       url: 'https://github.com/openai/docs/pull/42',
       mergedAt: '2026-04-06T10:00:00.000Z',
+    },
+  ],
+  timelineByMonth: [
+    {
+      key: '2026-04',
+      label: 'April 2026',
+      entries: [
+        {
+          id: 'pr-101',
+          title: 'Polish route transitions',
+          number: 101,
+          repoFullName: 'vercel/next.js',
+          url: 'https://github.com/vercel/next.js/pull/101',
+          mergedAt: '2026-04-08T08:00:00.000Z',
+        },
+        {
+          id: 'pr-42',
+          title: 'Improve caching docs',
+          number: 42,
+          repoFullName: 'openai/docs',
+          url: 'https://github.com/openai/docs/pull/42',
+          mergedAt: '2026-04-06T10:00:00.000Z',
+        },
+      ],
     },
   ],
   shareVariants: [
@@ -213,5 +238,59 @@ describe('ProfileResults', () => {
         model.timeline.map((t) => t.url).join('\n')
       )
     })
+  })
+
+  it('renders a month header with a copy button for each timeline month', async () => {
+    render(<ProfileResults model={model} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
+
+    expect(screen.getByText('April 2026')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /copy pr urls for april 2026/i }))
+
+    await waitFor(() => {
+      expect(mockWriteText).toHaveBeenCalledWith(
+        model.timelineByMonth[0].entries.map((entry) => entry.url).join('\n')
+      )
+    })
+  })
+
+  it('copies all PR URLs for a repo from the Summary Stats leaderboard', async () => {
+    render(<ProfileResults model={model} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /summary stats/i }))
+    fireEvent.click(screen.getByRole('button', { name: /copy pr urls for vercel\/next\.js/i }))
+
+    await waitFor(() => {
+      expect(mockWriteText).toHaveBeenCalledWith(
+        model.repoGrid[0].pullRequests.map((pr) => pr.url).join('\n')
+      )
+    })
+  })
+
+  it('shows an expand toggle for repos with more than 3 PRs and reveals the rest on click', () => {
+    render(<ProfileResults model={model} />)
+
+    expect(screen.queryByText('Tune cache tags')).not.toBeInTheDocument()
+
+    const expandButton = screen.getByRole('button', { name: /show all prs for vercel\/next\.js/i })
+    fireEvent.click(expandButton)
+
+    expect(screen.getByText(/Tune cache tags/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show fewer prs for vercel\/next\.js/i })).toBeInTheDocument()
+  })
+
+  it('does not show an expand toggle for repos with 3 or fewer PRs', () => {
+    render(<ProfileResults model={model} />)
+
+    expect(screen.queryByRole('button', { name: /show all prs for openai\/docs/i })).not.toBeInTheDocument()
+  })
+
+  it('renders repo grid PR titles in the "PR #N -  title" format', () => {
+    render(<ProfileResults model={model} />)
+
+    expect(screen.getByText(/PR #101/)).toBeInTheDocument()
+    expect(screen.getByText(/Polish route transitions/)).toBeInTheDocument()
   })
 })
