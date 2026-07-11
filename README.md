@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# mypr.pro.bd
+
+A developer portfolio tool that turns your merged pull requests into a public timeline. Connect your GitHub account, pick which repos to showcase, and let your open source work speak for itself.
+
+**Live app:** [mypr.pro.bd](https://mypr.pro.bd)
+
+## Features
+
+- **GitHub OAuth sign-in** — authenticate with your existing GitHub account, no separate registration
+- **Public PR timeline** — every visitor can browse a user's merged pull requests at `mypr.pro.bd/<username>`
+- **Selective repo showcase** — choose exactly which public repositories appear on your profile
+- **Home feed** — follow other developers and see their merged PRs in one place
+- **Automatic syncing** — merged PRs are fetched from GitHub and cached, with scheduled background syncing
+- **Shareable screenshots** — export your PR timeline as an image directly from the browser
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js](https://nextjs.org) (App Router) |
+| Language | TypeScript (strict mode) |
+| Auth + Database | [Supabase](https://supabase.com) |
+| Styling | Tailwind CSS + shadcn/ui + Lucide React |
+| GitHub API | [Octokit](https://github.com/octokit/octokit.js) |
+| Screenshots | html2canvas |
+| Hosting | Vercel |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- A [Supabase](https://supabase.com) project
+- A [GitHub OAuth App](https://github.com/settings/developers)
+
+### Setup
+
+1. Clone the repository
+
+   ```bash
+   git clone https://github.com/faisalahammad/mypr.git
+   cd mypr
+   ```
+
+2. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+3. Configure environment variables
+
+   Create a `.env.local` file in the project root with your own values:
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=
+   SUPABASE_SERVICE_ROLE_KEY=
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   ```
+
+   See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for full database and OAuth configuration steps.
+
+4. Run the development server
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) to see the result.
+
+### Testing
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm test              # run the test suite
+npm run test:watch    # watch mode
+npm run test:coverage # coverage report
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+/app
+  /api            → GitHub OAuth callback and PR sync API routes
+  /(app)/feed     → Home timeline (protected)
+  /(app)/[username] → Public profile + PR timeline
+  /(app)/settings → Repo configuration (protected)
+  /changelog      → Public changelog page
+/components       → Shared UI and feature components
+/lib              → Supabase client, GitHub helpers, shared utilities
+/types            → Shared TypeScript types
+/supabase         → Database migrations
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Contributing
 
-## Learn More
+Issues and pull requests are welcome. Please open an issue first to discuss significant changes before submitting a PR.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This project does not currently specify a license. All rights reserved unless otherwise stated.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")

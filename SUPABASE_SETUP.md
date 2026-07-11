@@ -9,7 +9,7 @@
 ## Option 1: Run Migration via SQL Editor (Recommended - Easiest)
 
 1. **Open Supabase SQL Editor**
-   - Go to: https://app.supabase.com/project/xlayjufjlhfgkblymdsu/sql/new
+   - Go to: https://app.supabase.com/project/<your-project-ref>/sql/new
 
 2. **Run the migrations**
    - Open every file in `supabase/migrations/` in lexical order:
@@ -53,13 +53,13 @@ If you have `psql` installed:
 ```
 
 You'll need your Supabase database password from:
-https://app.supabase.com/project/xlayjufjlhfgkblymdsu/settings/database
+https://app.supabase.com/project/<your-project-ref>/settings/database
 
 ## Option 3: Run Migration via Supabase CLI
 
 ```bash
 # Link your Supabase project
-supabase link --project-ref xlayjufjlhfgkblymdsu
+supabase link --project-ref <your-project-ref>
 
 # Push all local migrations
 supabase db push --linked --include-all
@@ -73,12 +73,12 @@ supabase db push --linked --include-all
    - Note the Client ID and verify the callback URL
 
 2. **Configure in Supabase**
-   - Go to: https://app.supabase.com/project/xlayjufjlhfgkblymdsu/auth/providers
+   - Go to: https://app.supabase.com/project/<your-project-ref>/auth/providers
    - Enable GitHub provider
    - Add your GitHub OAuth credentials:
      - Client ID: from GitHub OAuth app
      - Secret: from GitHub OAuth app
-   - Provider callback URL stays: `https://xlayjufjlhfgkblymdsu.supabase.co/auth/v1/callback`
+   - Provider callback URL stays: `https://<your-project-ref>.supabase.co/auth/v1/callback`
    - Site URL: `https://mypr.pro.bd`
    - Add Redirect URLs:
      - `https://mypr.pro.bd/api/auth/callback`
@@ -87,7 +87,7 @@ supabase db push --linked --include-all
 
 3. **Update GitHub OAuth App Callback URL**
    - In GitHub OAuth app settings, add this callback URL:
-     `https://xlayjufjlhfgkblymdsu.supabase.co/auth/v1/callback`
+     `https://<your-project-ref>.supabase.co/auth/v1/callback`
 
 ## Test the Setup
 
@@ -194,7 +194,7 @@ After migration is complete:
 
 If you encounter issues:
 
-1. Check Supabase logs: https://app.supabase.com/project/xlayjufjlhfgkblymdsu/logs
+1. Check Supabase logs: https://app.supabase.com/project/<your-project-ref>/logs
 2. Review migration output in SQL Editor
 3. Verify environment variables are correct
 4. Check GitHub OAuth app settings
