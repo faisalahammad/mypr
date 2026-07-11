@@ -1,104 +1,55 @@
 # mypr.pro.bd
 
-A developer portfolio tool that turns your merged pull requests into a public timeline. Connect your GitHub account, pick which repos to showcase, and let your open source work speak for itself.
+**Your code contributions, always up to date, always shareable.**
 
-**Live app:** [mypr.pro.bd](https://mypr.pro.bd)
+mypr.pro.bd turns your merged GitHub pull requests into a living public portfolio — no manual updates, no stale resume bullet points. Sign in with GitHub, pick the repos you're proud of, and get a shareable timeline that speaks for itself.
 
-## Features
+**Try it now:** [mypr.pro.bd](https://mypr.pro.bd)
 
-- **GitHub OAuth sign-in** — authenticate with your existing GitHub account, no separate registration
-- **Public PR timeline** — every visitor can browse a user's merged pull requests at `mypr.pro.bd/<username>`
-- **Selective repo showcase** — choose exactly which public repositories appear on your profile
-- **Home feed** — follow other developers and see their merged PRs in one place
-- **Automatic syncing** — merged PRs are fetched from GitHub and cached, with scheduled background syncing
-- **Shareable screenshots** — export your PR timeline as an image directly from the browser
+## Why mypr.pro.bd
 
-## Tech Stack
+A resume says what you claim to have done. A GitHub profile shows commits, but buries the story in noise. mypr.pro.bd shows exactly what you shipped — real, merged, reviewed pull requests — in a clean timeline anyone can browse.
+
+- **Proof over claims.** Recruiters and clients see actual merged work instead of a bullet list.
+- **Zero maintenance.** Your timeline syncs automatically as you merge new PRs — no updating a portfolio site by hand.
+- **Curated, not cluttered.** You choose which repositories are showcased, so side projects and noisy forks don't dilute your best work.
+- **Built for sharing.** Every profile has a clean public URL, and you can export your timeline as an image for LinkedIn, X, or a portfolio site.
+- **Discover other developers.** Follow people whose work you admire and see their contributions in your home feed.
+
+## Who it's for
+
+- **Job seekers** who want to stand out with real evidence of their work, not just a list of technologies.
+- **Open source contributors** who want a single place to show their impact across repositories.
+- **Freelancers and consultants** who want a credibility signal they can link from proposals or a personal site.
+- **Engineering teams** who want a lightweight way to follow what teammates are shipping.
+
+## How it works
+
+1. **Sign in with GitHub** — no separate account, no password to manage.
+2. **Choose your repos** — pick which public repositories should appear on your profile.
+3. **We do the syncing** — merged pull requests are fetched and kept up to date automatically.
+4. **Share your profile** — send people to `mypr.pro.bd/<your-username>`, or export a screenshot.
+
+## Built with
+
+mypr.pro.bd is built on a modern, production-grade stack:
 
 | Layer | Technology |
 |---|---|
 | Framework | [Next.js](https://nextjs.org) (App Router) |
-| Language | TypeScript (strict mode) |
+| Language | TypeScript |
 | Auth + Database | [Supabase](https://supabase.com) |
-| Styling | Tailwind CSS + shadcn/ui + Lucide React |
-| GitHub API | [Octokit](https://github.com/octokit/octokit.js) |
-| Screenshots | html2canvas |
+| Styling | Tailwind CSS + shadcn/ui |
+| GitHub integration | [Octokit](https://github.com/octokit/octokit.js) |
 | Hosting | Vercel |
 
-## Getting Started
+## Feedback and bug reports
 
-### Prerequisites
-
-- Node.js 20+
-- A [Supabase](https://supabase.com) project
-- A [GitHub OAuth App](https://github.com/settings/developers)
-
-### Setup
-
-1. Clone the repository
-
-   ```bash
-   git clone https://github.com/faisalahammad/mypr.git
-   cd mypr
-   ```
-
-2. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-3. Configure environment variables
-
-   Create a `.env.local` file in the project root with your own values:
-
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=
-   SUPABASE_SERVICE_ROLE_KEY=
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   ```
-
-   See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for full database and OAuth configuration steps.
-
-4. Run the development server
-
-   ```bash
-   npm run dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000) to see the result.
-
-### Testing
-
-```bash
-npm test              # run the test suite
-npm run test:watch    # watch mode
-npm run test:coverage # coverage report
-```
-
-## Project Structure
-
-```
-/app
-  /api            → GitHub OAuth callback and PR sync API routes
-  /(app)/feed     → Home timeline (protected)
-  /(app)/[username] → Public profile + PR timeline
-  /(app)/settings → Repo configuration (protected)
-  /changelog      → Public changelog page
-/components       → Shared UI and feature components
-/lib              → Supabase client, GitHub helpers, shared utilities
-/types            → Shared TypeScript types
-/supabase         → Database migrations
-```
-
-## Contributing
-
-Issues and pull requests are welcome. Please open an issue first to discuss significant changes before submitting a PR.
+mypr.pro.bd is closed-source and not available for self-hosting or forking. If you spot a bug or have a feature request, please [open an issue](https://github.com/faisalahammad/mypr/issues) — feedback from real users is what shapes the roadmap.
 
 ## License
 
-This project does not currently specify a license. All rights reserved unless otherwise stated.
+This repository is provided for transparency only. All rights reserved — the code is not licensed for reuse, redistribution, or self-hosting.
 
 ---
 
