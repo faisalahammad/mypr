@@ -24,8 +24,7 @@ const LANDING_LINKS = [
 
 const APP_LINKS = [
   { href: '/about', label: 'About' },
-  { href: '/feed', label: 'Feed' },
-  { href: '/settings', label: 'Settings' },
+  { href: '/changelog', label: 'Changelog' },
 ]
 
 export default function Footer({ isLandingPage = false }: FooterProps) {

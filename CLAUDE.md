@@ -27,6 +27,7 @@ mypr.pro.bd is a developer portfolio tool that lets engineers showcase their mer
     /feed           → Home timeline (protected)
     /[username]     → Public profile + PR timeline
     /settings       → Repo configuration (protected)
+  /changelog        → Public changelog page (see Changelog section below)
 /components
   /ui               → shadcn/ui components
   /pr-card          → PR timeline card component
@@ -94,6 +95,15 @@ synced_at          timestamptz (default now())
 - **No `console.log` in production code.** Use error boundaries and proper error returns instead.
 - **TypeScript strict.** All types defined in `/types/index.ts` or co-located. No `any`.
 - **Environment variables.** Never hardcode secrets. Always use `process.env.*`.
+
+## Changelog
+
+- Public page at `/changelog` (`src/app/changelog/page.tsx`), linked from the footer's app nav (`src/components/layout/Footer.tsx` → `APP_LINKS`).
+- Entries live in the `CHANGELOG` array at the top of `src/app/changelog/page.tsx`, grouped by date, newest first.
+- When shipping a user-facing feature, fix, or UX change, add a bullet to the changelog in the same commit.
+- **Never list dependency/package version bumps** (e.g. `chore(deps): update packages`) as changelog entries — those are not user-facing.
+- Keep entries in plain, user-facing language (what changed for the user), not commit-message or internal implementation language.
+- The footer's app nav intentionally does not include Feed or Settings — those stay in the header nav for authenticated users. Footer app links are currently: About, Changelog.
 
 ## Environment Variables
 
