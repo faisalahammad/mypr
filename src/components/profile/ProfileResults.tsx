@@ -166,13 +166,35 @@ export function ProfileResults({ model }: ProfileResultsProps) {
                       <div className={styles.repoHeader}>
                         <div className={styles.repoIcon}>📁</div>
                         <div>
-                          <div className={styles.repoName}>{repo.name}</div>
+                          <a
+                            href={`https://github.com/${repo.fullName}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.repoName}
+                            title={repo.fullName}
+                          >
+                            {repo.name}
+                          </a>
                           <div className={styles.repoOrg}>{repo.org}</div>
                         </div>
                       </div>
 
-                      <div className={styles.repoCount}>
-                        {repo.pullRequestCount} merged PR{repo.pullRequestCount === 1 ? '' : 's'}
+                      <div className={styles.repoCountRow}>
+                        <div className={styles.repoCount}>
+                          {repo.pullRequestCount} merged PR{repo.pullRequestCount === 1 ? '' : 's'}
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.repoCopyButton}
+                          onClick={() => handleCopyUrls(repo.pullRequests.map((pr) => pr.url))}
+                          aria-label={`Copy PR URLs for ${repo.fullName}`}
+                          title="Copy PR URLs"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                        </button>
                       </div>
 
                       <div className={styles.repoList}>
@@ -267,7 +289,9 @@ export function ProfileResults({ model }: ProfileResultsProps) {
                 {model.timelineByMonth.map((month) => (
                   <div key={month.key} className={styles.timelineMonthGroup}>
                     <div className={styles.timelineMonthHeader}>
-                      <span className={styles.timelineMonthLabel}>{month.label}</span>
+                      <span className={styles.timelineMonthLabel}>
+                        {month.label} ({month.entries.length})
+                      </span>
                       <button
                         type="button"
                         className={styles.timelineMonthCopyButton}

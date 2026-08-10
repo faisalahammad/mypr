@@ -25,6 +25,14 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: 'August 10, 2026',
+    items: [
+      'Timeline month headers now show the total PR count for that month',
+      'Each repo card in the profile repo grid has a copy button to grab all of that repo\'s PRs at once',
+      'Repo names in the profile repo grid now link to the repository on GitHub',
+    ],
+  },
+  {
     date: 'July 11, 2026',
     items: [
       'Profile timeline now groups pull requests by month for easier browsing',
