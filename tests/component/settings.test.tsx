@@ -254,11 +254,11 @@ describe('Settings Page', () => {
     const activeSection = activeHeading.closest('section')
     const activeCount = activeSection?.querySelector('p')
 
-    expect(activeHeading.className).toContain('text-base')
+    expect(activeHeading.className).toContain('text-lg')
     expect(activeHeading.className).toContain('text-foreground')
     expect(activeCount?.textContent).toBe('1 repo')
     expect(activeCount?.className).toContain('text-sm')
-    expect(activeCount?.className).toContain('text-foreground/80')
+    expect(activeCount?.className).toContain('text-muted-foreground')
   })
 
   it('shows an actionable repositories error state when repo loading fails', async () => {
