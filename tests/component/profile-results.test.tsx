@@ -245,7 +245,7 @@ describe('ProfileResults', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
 
-    expect(screen.getByText('April 2026')).toBeInTheDocument()
+    expect(screen.getByText('April 2026 (2)')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /copy pr urls for april 2026/i }))
 
