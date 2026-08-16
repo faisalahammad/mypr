@@ -43,8 +43,12 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
   // Public routes that should redirect to feed if authenticated
-  const publicRoutes = ['/login']
-  const isPublicRoute = publicRoutes.some(route => pathname === route)
+  const isPublicRoute = pathname === '/login'
+
+  // Short-circuit non-auth paths - no Supabase auth network call
+  if (!isProtectedRoute && !isPublicRoute) {
+    return response
+  }
 
   // Redirect unauthenticated users from protected routes to login
   if (isProtectedRoute && !user) {
