@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase";
+import { getServerUser } from "@/lib/supabase";
 import { buildAuthCallbackPath } from "@/lib/auth-redirect";
 import { GitHubLoginButton } from "@/components/auth/GitHubLoginButton";
 import { buttonVariants } from "@/components/ui/button";
@@ -193,10 +193,7 @@ export default async function HomePage({
     return redirect(buildAuthCallbackPath(authCode, next))
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getServerUser();
   if (user) redirect("/feed");
 
   return (

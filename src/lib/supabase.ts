@@ -432,19 +432,24 @@ export const getSession = async () => {
 }
 
 /**
- * Get the current user from a server component
- * Returns null if not authenticated
+ * Get the current user from the cookie-local session.
+ * Returns null if not authenticated.
+ * Network is validated by middleware on protected routes; components trust the cookie.
+ * @deprecated Use getServerUser() (cookie-local, no network) in server components.
  */
 export const getUser = async () => {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  if (error) {
-    console.error('Error getting user:', error)
-    return null
-  }
-
+  const user = await getServerUser()
   return user
+}
+
+/**
+ * Get the authenticated user from the cookie-local session.
+ * Returns null if not authenticated.
+ * Network is validated by middleware on protected routes; components trust the cookie.
+ */
+export const getServerUser = async () => {
+  const session = await getSession()
+  return session?.user ?? null
 }
 
 /**
@@ -452,7 +457,7 @@ export const getUser = async () => {
  * Returns null if not authenticated or profile doesn't exist
  */
 export const getUserProfile = async () => {
-  const user = await getUser()
+  const user = await getServerUser()
   if (!user) return null
 
   const supabase = await createSupabaseServerClient()
@@ -475,7 +480,7 @@ export const getUserProfile = async () => {
  * Use this at the top of protected server components
  */
 export const requireAuth = async () => {
-  const user = await getUser()
+  const user = await getServerUser()
   if (!user) {
     // This will be handled by middleware, but we redirect as a fallback
     redirect('/login')
@@ -488,7 +493,7 @@ export const requireAuth = async () => {
  * Returns boolean - useful for conditional rendering
  */
 export const isAuthenticated = async () => {
-  const user = await getUser()
+  const user = await getServerUser()
   return !!user
 }
 

@@ -25,6 +25,12 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: 'August 17, 2026',
+    items: [
+      'Navigation between pages is noticeably faster — profile, feed, and settings now load without redundant authentication round-trips.',
+    ],
+  },
+  {
     date: 'August 10, 2026',
     items: [
       'Timeline month headers now show the total PR count for that month',
