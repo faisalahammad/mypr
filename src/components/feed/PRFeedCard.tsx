@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
-import type { FeedPR, ReactionCounts, ReactionType } from '@/lib/feed'
+import type { FeedPR, ReactionCounts, ReactionType } from '@/lib/feed-types'
 import { ReactionBar } from './ReactionBar'
 
 interface PRFeedCardProps {

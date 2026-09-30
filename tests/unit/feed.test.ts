@@ -1,10 +1,8 @@
 import {
   buildFeed,
+  FEED_PAGE_SIZE,
   type FeedSupabaseClient,
   getCachedFeed,
-  getEngagementBoost,
-  getRecencyScore,
-  getRelationshipWeight,
   setCachedFeed,
   type FeedPage,
   type ReactionCounts,
@@ -48,9 +46,6 @@ type FeedCacheRow = {
 }
 
 type MockDataset = {
-  profile?: FeedProfileRow | null
-  follows?: Array<{ following_id: string }>
-  githubFollows?: Array<{ following_id: string }>
   pullRequests?: PullRequestRow[]
   reactions?: ReactionRow[]
   activeRepos?: Array<{ user_id: string; repo_full_name: string; owner_avatar_url: string | null }>
@@ -61,44 +56,53 @@ function resolved<T>(data: T): QueryResult<T> {
   return Promise.resolve({ data, error: null })
 }
 
+/**
+ * Simulates the pull_requests query: rows ordered by merged_at desc then id
+ * asc, with an optional inclusive merged_at ceiling from `.lte`.
+ */
+interface MockPullRequestBuilder {
+  select: jest.Mock<MockPullRequestBuilder, []>
+  order: jest.Mock<MockPullRequestBuilder, []>
+  lte: jest.Mock<MockPullRequestBuilder, [string, string]>
+  limit: jest.Mock<QueryResult<PullRequestRow[]>, [number]>
+}
+
+function createPullRequestQuery(dataset: PullRequestRow[]) {
+  let mergedAtCeiling: string | null = null
+
+  const compareRows = (left: PullRequestRow, right: PullRequestRow) => {
+    if (left.merged_at !== right.merged_at) {
+      return left.merged_at < right.merged_at ? 1 : -1
+    }
+    return left.id < right.id ? -1 : 1
+  }
+
+  const builder: MockPullRequestBuilder = {
+    select: jest.fn(() => builder),
+    order: jest.fn(() => builder),
+    lte: jest.fn((_column: string, value: string) => {
+      mergedAtCeiling = value
+      return builder
+    }),
+    limit: jest.fn((value: number) => {
+      const sorted = [...dataset].sort(compareRows)
+      const filtered = mergedAtCeiling
+        ? sorted.filter((row) => row.merged_at <= mergedAtCeiling!)
+        : sorted
+      return resolved(filtered.slice(0, value))
+    }),
+  }
+
+  return builder
+}
+
 function createFeedSupabaseMock(dataset: MockDataset) {
   const upsert = jest.fn().mockResolvedValue({ data: null, error: null })
+  const pullRequestQuery = createPullRequestQuery(dataset.pullRequests ?? [])
 
   const from = jest.fn((table: string) => {
-    if (table === 'profiles') {
-      return {
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            maybeSingle: jest.fn(() => resolved(dataset.profile ?? null)),
-          })),
-        })),
-      }
-    }
-
-    if (table === 'follows') {
-      return {
-        select: jest.fn(() => ({
-          eq: jest.fn(() => resolved(dataset.follows ?? [])),
-        })),
-      }
-    }
-
-    if (table === 'github_follows') {
-      return {
-        select: jest.fn(() => ({
-          eq: jest.fn(() => resolved(dataset.githubFollows ?? [])),
-        })),
-      }
-    }
-
     if (table === 'pull_requests') {
-      return {
-        select: jest.fn(() => ({
-          order: jest.fn(() => ({
-            limit: jest.fn((value: number) => resolved((dataset.pullRequests ?? []).slice(0, value))),
-          })),
-        })),
-      }
+      return pullRequestQuery
     }
 
     if (table === 'reactions') {
@@ -130,7 +134,7 @@ function createFeedSupabaseMock(dataset: MockDataset) {
     error: null,
   })
 
-  return { from, rpc, upsert }
+  return { from, rpc, upsert, pullRequestQuery }
 }
 
 function isoHoursAgo(hours: number) {
@@ -173,330 +177,171 @@ function makePullRequestRow(overrides: Partial<PullRequestRow> = {}): PullReques
   }
 }
 
-describe('feed scoring helpers', () => {
-  it('weights self PRs based on following count thresholds', () => {
-    expect(getRelationshipWeight('user-1', 'user-1', new Set(), new Set(), 0)).toBe(1)
-    expect(getRelationshipWeight('user-1', 'user-1', new Set(), new Set(), 5)).toBe(0.7)
-    expect(getRelationshipWeight('user-1', 'user-1', new Set(), new Set(), 50)).toBe(0.4)
-    expect(getRelationshipWeight('user-1', 'user-1', new Set(), new Set(), 101)).toBe(0.2)
-  })
-
-  it('always gives in-app followed authors full weight', () => {
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(['user-2']), new Set(), 0)).toBe(1)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(['user-2']), new Set(), 1000)).toBe(1)
-  })
-
-  it('weights github-followed authors by follow-count band', () => {
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(['user-2']), 0)).toBe(0.5)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(['user-2']), 5)).toBe(0.6)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(['user-2']), 50)).toBe(0.4)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(['user-2']), 101)).toBe(0.2)
-  })
-
-  it('weights discovery authors by follow-count band', () => {
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(), 0)).toBe(0.3)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(), 5)).toBe(0.15)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(), 50)).toBe(0.05)
-    expect(getRelationshipWeight('user-2', 'user-1', new Set(), new Set(), 101)).toBe(0)
-  })
-
-  it('decays recency scores over time within a category', () => {
-    const newer = getRecencyScore(isoHoursAgo(12), 'followed')
-    const older = getRecencyScore(isoHoursAgo(144), 'followed')
-
-    expect(newer).toBeGreaterThan(older)
-  })
-
-  it('caps engagement boost at 1.4', () => {
-    expect(getEngagementBoost(baseReactionCounts())).toBe(1)
-    expect(
-      getEngagementBoost({
-        love: 10,
-        thumbsup: 10,
-        informative: 10,
-        support: 10,
-        funny: 10,
-      })
-    ).toBe(1.4)
-  })
-})
+function allAuthorsActive(prs: PullRequestRow[]) {
+  return Array.from(new Set(prs.map((pr) => ({ user_id: pr.user_id, repo_full_name: pr.repo_full_name })))).map(
+    (entry) => ({ ...entry, owner_avatar_url: null })
+  )
+}
 
 describe('buildFeed', () => {
+  it('returns every registered user\'s PRs newest first', async () => {
+    const prs = [
+      makePullRequestRow({ id: 'pr-old', user_id: 'author-a', merged_at: isoHoursAgo(72) }),
+      makePullRequestRow({ id: 'pr-new', user_id: 'author-b', merged_at: isoHoursAgo(1) }),
+      makePullRequestRow({ id: 'pr-mid', user_id: 'author-c', merged_at: isoHoursAgo(24) }),
+    ]
+
+    const supabase = createFeedSupabaseMock({ pullRequests: prs, activeRepos: allAuthorsActive(prs) })
+
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null)
+
+    expect(FEED_PAGE_SIZE).toBe(10)
+    expect(feed.items.map((item) => item.id)).toEqual(['pr-new', 'pr-mid', 'pr-old'])
+    expect(feed.items.map((item) => item.author.github_username)).toEqual([
+      'author-b',
+      'author-c',
+      'author-a',
+    ])
+    expect(feed.next_cursor).toBeNull()
+  })
+
+  it('paginates with cursors and reports when the end is reached', async () => {
+    const prs = Array.from({ length: 5 }, (_, index) =>
+      makePullRequestRow({ id: `pr-${index + 1}`, user_id: `author-${index + 1}`, merged_at: isoHoursAgo(index + 1) })
+    )
+
+    const supabase = createFeedSupabaseMock({ pullRequests: prs, activeRepos: allAuthorsActive(prs) })
+    const client = supabase as unknown as FeedSupabaseClient
+
+    const firstPage = await buildFeed(client, 'user-1', null, 2)
+    expect(firstPage.items.map((item) => item.id)).toEqual(['pr-1', 'pr-2'])
+    expect(firstPage.next_cursor).not.toBeNull()
+
+    const secondPage = await buildFeed(client, 'user-1', firstPage.next_cursor, 2)
+    expect(secondPage.items.map((item) => item.id)).toEqual(['pr-3', 'pr-4'])
+    expect(secondPage.next_cursor).not.toBeNull()
+
+    const thirdPage = await buildFeed(client, 'user-1', secondPage.next_cursor, 2)
+    expect(thirdPage.items.map((item) => item.id)).toEqual(['pr-5'])
+    expect(thirdPage.next_cursor).toBeNull()
+  })
+
   it('treats an invalid cursor as the first page', async () => {
-    const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      pullRequests: [
-        makePullRequestRow({ id: 'pr-b', user_id: 'author-b', merged_at: isoHoursAgo(2) }),
-        makePullRequestRow({ id: 'pr-a', user_id: 'author-a', merged_at: isoHoursAgo(1) }),
-      ],
-      activeRepos: [
-        { user_id: 'author-a', repo_full_name: 'author-a/repo', owner_avatar_url: null },
-        { user_id: 'author-b', repo_full_name: 'author-b/repo', owner_avatar_url: null },
-      ],
-    })
+    const prs = [
+      makePullRequestRow({ id: 'pr-a', user_id: 'author-a', merged_at: isoHoursAgo(1) }),
+      makePullRequestRow({ id: 'pr-b', user_id: 'author-b', merged_at: isoHoursAgo(2) }),
+    ]
 
-    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', 'not-base64', 20)
+    const supabase = createFeedSupabaseMock({ pullRequests: prs, activeRepos: allAuthorsActive(prs) })
 
-    expect(feed.items).toHaveLength(2)
-    expect(feed.items[0]?.id).toBe('pr-a')
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', 'not-base64', 2)
+
+    expect(feed.items.map((item) => item.id)).toEqual(['pr-a', 'pr-b'])
   })
 
-  it('applies cursor pagination after sorting by score and id', async () => {
-    const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      pullRequests: [
-        makePullRequestRow({ id: 'pr-c', user_id: 'author-c', merged_at: isoHoursAgo(1) }),
-        makePullRequestRow({ id: 'pr-b', user_id: 'author-b', merged_at: isoHoursAgo(1) }),
-        makePullRequestRow({ id: 'pr-a', user_id: 'author-a', merged_at: isoHoursAgo(1) }),
-      ],
-      activeRepos: [
-        { user_id: 'author-a', repo_full_name: 'author-a/repo', owner_avatar_url: null },
-        { user_id: 'author-b', repo_full_name: 'author-b/repo', owner_avatar_url: null },
-        { user_id: 'author-c', repo_full_name: 'author-c/repo', owner_avatar_url: null },
-      ],
-    })
+  it('orders PRs that share a merged_at timestamp by id ascending', async () => {
+    const sharedMergedAt = isoHoursAgo(3)
+    const prs = [
+      makePullRequestRow({ id: 'pr-b', user_id: 'author-b', merged_at: sharedMergedAt }),
+      makePullRequestRow({ id: 'pr-a', user_id: 'author-a', merged_at: sharedMergedAt }),
+      makePullRequestRow({ id: 'pr-c', user_id: 'author-c', merged_at: sharedMergedAt }),
+    ]
 
-    const firstPage = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 2)
-    const secondPage = await buildFeed(
-      supabase as unknown as FeedSupabaseClient,
-      'user-1',
-      firstPage.next_cursor,
-      2
-    )
+    const supabase = createFeedSupabaseMock({ pullRequests: prs, activeRepos: allAuthorsActive(prs) })
 
-    expect(firstPage.items).toHaveLength(2)
-    expect(secondPage.items).toHaveLength(1)
-    expect(secondPage.items[0]?.id).toBe('pr-a')
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 2)
+
+    expect(feed.items.map((item) => item.id)).toEqual(['pr-a', 'pr-b'])
+    expect(feed.next_cursor).not.toBeNull()
   })
 
-  it('applies diversity penalties and drops the fourth PR from the same author', async () => {
-    const sharedMergedAt = isoHoursAgo(1)
-    const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      pullRequests: [
-        makePullRequestRow({ id: 'pr-4', user_id: 'author-1', merged_at: sharedMergedAt }),
-        makePullRequestRow({ id: 'pr-3', user_id: 'author-1', merged_at: sharedMergedAt }),
-        makePullRequestRow({ id: 'pr-2', user_id: 'author-1', merged_at: sharedMergedAt }),
-        makePullRequestRow({ id: 'pr-1', user_id: 'author-1', merged_at: sharedMergedAt }),
-        makePullRequestRow({ id: 'pr-x', user_id: 'author-2', merged_at: isoHoursAgo(12) }),
-      ],
-      activeRepos: [
-        { user_id: 'author-1', repo_full_name: 'author-1/repo', owner_avatar_url: null },
-        { user_id: 'author-2', repo_full_name: 'author-2/repo', owner_avatar_url: null },
-      ],
-    })
-
-    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 20)
-
-    expect(feed.items.map((item) => item.id)).toEqual(['pr-4', 'pr-3', 'pr-2', 'pr-x'])
-    expect(feed.items[1]?.score).toBeCloseTo(feed.items[0]!.score * 0.6, 5)
-    expect(feed.items[2]?.score).toBeCloseTo(feed.items[0]!.score * 0.3, 5)
-  })
-
-  it('keeps stale items out of the first page when enough fresh followed content exists', async () => {
-    const freshFollowed = Array.from({ length: 20 }, (_, index) =>
+  it('skips PRs outside the authors\' public active repos and keeps filling the page', async () => {
+    const hidden = Array.from({ length: 18 }, (_, index) =>
       makePullRequestRow({
-        id: `followed-fresh-${index + 1}`,
-        user_id: `followed-user-${index + 1}`,
-        merged_at: isoHoursAgo(24 * (index + 1)),
-      })
-    )
-
-    const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      follows: [
-        { following_id: 'followed-user' },
-        ...freshFollowed.map((pr) => ({ following_id: pr.user_id })),
-      ],
-      githubFollows: [{ following_id: 'github-user' }, { following_id: 'github-fresh-user' }],
-      pullRequests: [
-        ...freshFollowed,
-        makePullRequestRow({ id: 'github-fresh', user_id: 'github-fresh-user', merged_at: isoHoursAgo(24 * 10) }),
-        makePullRequestRow({ id: 'self-old', user_id: 'user-1', merged_at: isoHoursAgo(24 * 365) }),
-        makePullRequestRow({ id: 'followed-old', user_id: 'followed-user', merged_at: isoHoursAgo(24 * 181) }),
-        makePullRequestRow({ id: 'github-old', user_id: 'github-user', merged_at: isoHoursAgo(24 * 181) }),
-        makePullRequestRow({ id: 'discovery-old', user_id: 'discovery-user', merged_at: isoHoursAgo(24 * 61) }),
-      ],
-      activeRepos: [
-        { user_id: 'user-1', repo_full_name: 'user-1/repo', owner_avatar_url: null },
-        ...freshFollowed.map((pr) => ({
-          user_id: pr.user_id,
-          repo_full_name: pr.repo_full_name,
-          owner_avatar_url: null,
-        })),
-        { user_id: 'github-fresh-user', repo_full_name: 'github-fresh-user/repo', owner_avatar_url: null },
-        { user_id: 'followed-user', repo_full_name: 'followed-user/repo', owner_avatar_url: null },
-        { user_id: 'github-user', repo_full_name: 'github-user/repo', owner_avatar_url: null },
-        { user_id: 'discovery-user', repo_full_name: 'discovery-user/repo', owner_avatar_url: null },
-      ],
-    })
-
-    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 20)
-
-    expect(feed.items).toHaveLength(20)
-    expect(feed.items.map((item) => item.id)).toContain('followed-fresh-1')
-    expect(feed.items.map((item) => item.id)).not.toContain('followed-old')
-    expect(feed.items.map((item) => item.id)).not.toContain('github-old')
-    expect(feed.items.map((item) => item.id)).not.toContain('discovery-old')
-    expect(feed.items.map((item) => item.id)).not.toContain('self-old')
-  })
-
-  it('keeps stale items out when enough fresh items already fill the page', async () => {
-    const freshDiscovery = Array.from({ length: 20 }, (_, index) =>
-      makePullRequestRow({
-        id: `fresh-${index + 1}`,
-        user_id: `fresh-user-${index + 1}`,
+        id: `hidden-${index + 1}`,
+        user_id: 'author-hidden',
+        repo_full_name: 'author-hidden/private-repo',
         merged_at: isoHoursAgo(index + 1),
       })
     )
+    const visible = Array.from({ length: 10 }, (_, index) =>
+      makePullRequestRow({
+        id: `visible-${index + 1}`,
+        user_id: 'author-visible',
+        merged_at: isoHoursAgo(100 + index),
+      })
+    )
 
     const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      pullRequests: [
-        ...freshDiscovery,
-        makePullRequestRow({
-          id: 'stale-discovery',
-          user_id: 'stale-discovery-user',
-          merged_at: isoHoursAgo(24 * 120),
-        }),
-      ],
-      activeRepos: [
-        ...freshDiscovery.map((pr) => ({
-          user_id: pr.user_id,
-          repo_full_name: pr.repo_full_name,
-          owner_avatar_url: null,
-        })),
-        {
-          user_id: 'stale-discovery-user',
-          repo_full_name: 'stale-discovery-user/repo',
-          owner_avatar_url: null,
-        },
-      ],
+      pullRequests: [...hidden, ...visible],
+      activeRepos: [{ user_id: 'author-visible', repo_full_name: 'author-visible/repo', owner_avatar_url: null }],
     })
 
-    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 20)
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 10)
 
-    expect(feed.items).toHaveLength(20)
-    expect(feed.items.map((item) => item.id)).not.toContain('stale-discovery')
+    expect(feed.items).toHaveLength(10)
+    expect(feed.items.map((item) => item.id)).toEqual(visible.map((pr) => pr.id))
+    expect(feed.next_cursor).toBeNull()
   })
 
-  it('looks far enough back to include discovery PRs beyond the first 100 recent rows', async () => {
-    const selfPRs = Array.from({ length: 150 }, (_, index) =>
+  it('attaches the viewer\'s reactions to the returned items', async () => {
+    const prs = [
       makePullRequestRow({
-        id: `self-${index + 1}`,
-        user_id: 'user-1',
+        id: 'pr-loved',
+        user_id: 'author-a',
+        reaction_counts: { love: 3 },
+      }),
+      makePullRequestRow({ id: 'pr-unreacted', user_id: 'author-b' }),
+    ]
+
+    const supabase = createFeedSupabaseMock({
+      pullRequests: prs,
+      reactions: [{ pr_id: 'pr-loved', reaction_type: 'love' }],
+      activeRepos: allAuthorsActive(prs),
+    })
+
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 10)
+
+    expect(feed.items.find((item) => item.id === 'pr-loved')?.user_reaction).toBe('love')
+    expect(feed.items.find((item) => item.id === 'pr-loved')?.reaction_counts.love).toBe(3)
+    expect(feed.items.find((item) => item.id === 'pr-unreacted')?.user_reaction).toBeNull()
+  })
+
+  it('returns an empty page with no cursor when there are no pull requests', async () => {
+    const supabase = createFeedSupabaseMock({})
+
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null)
+
+    expect(feed.items).toEqual([])
+    expect(feed.next_cursor).toBeNull()
+  })
+
+  it('keeps paginating when a page of raw rows is entirely filtered out', async () => {
+    const hidden = Array.from({ length: 20 }, (_, index) =>
+      makePullRequestRow({
+        id: `hidden-${index + 1}`,
+        user_id: 'author-hidden',
+        repo_full_name: 'author-hidden/private-repo',
         merged_at: isoHoursAgo(index + 1),
       })
     )
-    const discoveryPR = makePullRequestRow({
-      id: 'discovery-late',
-      user_id: 'discovery-user-late',
-      merged_at: isoHoursAgo(151),
-    })
-
-    const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      pullRequests: [...selfPRs, discoveryPR],
-      activeRepos: [
-        { user_id: 'user-1', repo_full_name: 'user-1/repo', owner_avatar_url: null },
-        {
-          user_id: discoveryPR.user_id,
-          repo_full_name: discoveryPR.repo_full_name,
-          owner_avatar_url: null,
-        },
-      ],
-    })
-
-    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 20)
-
-    expect(feed.items.map((item) => item.id)).toContain('discovery-late')
-  })
-
-  it('backfills with stale followed and discovery items when fresh content underfills the page', async () => {
-    const recentSelf = Array.from({ length: 3 }, (_, index) =>
+    const visible = Array.from({ length: 6 }, (_, index) =>
       makePullRequestRow({
-        id: `self-${index + 1}`,
-        user_id: 'user-1',
-        merged_at: isoHoursAgo(index + 1),
-      })
-    )
-
-    const staleFollowed = Array.from({ length: 8 }, (_, index) =>
-      makePullRequestRow({
-        id: `followed-old-${index + 1}`,
-        user_id: `followed-user-${index + 1}`,
-        merged_at: isoHoursAgo(24 * (220 + index)),
-      })
-    )
-
-    const staleDiscovery = Array.from({ length: 9 }, (_, index) =>
-      makePullRequestRow({
-        id: `discovery-old-${index + 1}`,
-        user_id: `discovery-user-${index + 1}`,
-        merged_at: isoHoursAgo(24 * (120 + index)),
+        id: `visible-${index + 1}`,
+        user_id: 'author-visible',
+        merged_at: isoHoursAgo(100 + index),
       })
     )
 
     const supabase = createFeedSupabaseMock({
-      profile: {
-        id: 'user-1',
-        github_username: 'user-1',
-        github_avatar_url: null,
-        display_name: 'User 1',
-      },
-      follows: staleFollowed.map((pr) => ({ following_id: pr.user_id })),
-      pullRequests: [...recentSelf, ...staleFollowed, ...staleDiscovery],
-      activeRepos: [
-        { user_id: 'user-1', repo_full_name: 'user-1/repo', owner_avatar_url: null },
-        ...staleFollowed.map((pr) => ({
-          user_id: pr.user_id,
-          repo_full_name: pr.repo_full_name,
-          owner_avatar_url: null,
-        })),
-        ...staleDiscovery.map((pr) => ({
-          user_id: pr.user_id,
-          repo_full_name: pr.repo_full_name,
-          owner_avatar_url: null,
-        })),
-      ],
+      pullRequests: [...hidden, ...visible],
+      activeRepos: [{ user_id: 'author-visible', repo_full_name: 'author-visible/repo', owner_avatar_url: null }],
     })
 
-    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 20)
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 10)
 
-    expect(feed.items).toHaveLength(20)
-    expect(feed.items.map((item) => item.id)).toEqual(
-      expect.arrayContaining(['followed-old-1', 'discovery-old-1'])
-    )
+    expect(feed.items.map((item) => item.id)).toEqual(visible.map((pr) => pr.id))
+    expect(feed.next_cursor).toBeNull()
   })
 })
 

@@ -29,7 +29,7 @@ export default async function FeedPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Your Feed</h1>
         <p className="text-muted-foreground mt-2">
-          Merged pull requests ranked by who you follow, recency, and community reactions.
+          Merged pull requests from all registered users, newest first.
         </p>
       </div>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactionCounts, ReactionType } from '@/lib/feed'
+import type { ReactionCounts, ReactionType } from '@/lib/feed-types'
 
 interface ReactionBarProps {
   prId: string

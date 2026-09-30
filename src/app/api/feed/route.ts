@@ -1,4 +1,4 @@
-import { buildFeed, getCachedFeed, setCachedFeed } from '@/lib/feed'
+import { buildFeed, FEED_PAGE_SIZE, getCachedFeed, setCachedFeed } from '@/lib/feed'
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -14,9 +14,11 @@ export async function GET(request: NextRequest) {
   }
 
   const cursor = request.nextUrl.searchParams.get('cursor')
+  const requestedLimit = Number(request.nextUrl.searchParams.get('limit'))
+  const limit = requestedLimit > 0 ? Math.min(Math.floor(requestedLimit), 50) : FEED_PAGE_SIZE
 
   if (cursor) {
-    const feed = await buildFeed(supabase, session.user.id, cursor)
+    const feed = await buildFeed(supabase, session.user.id, cursor, limit)
     return NextResponse.json(feed)
   }
 
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(cachedFeed)
   }
 
-  const feed = await buildFeed(supabase, session.user.id, null)
+  const feed = await buildFeed(supabase, session.user.id, null, limit)
   await setCachedFeed(supabase, session.user.id, feed)
 
   return NextResponse.json(feed)

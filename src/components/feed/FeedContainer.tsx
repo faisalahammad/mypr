@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { FeedPage, FeedPR } from '@/lib/feed'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FEED_PAGE_SIZE, type FeedPage, type FeedPR } from '@/lib/feed-types'
 import { FeedSkeleton } from './FeedSkeleton'
 import { PRFeedCard } from './PRFeedCard'
 
@@ -33,42 +33,48 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
 
   const hasMore = useMemo(() => nextCursor !== null, [nextCursor])
 
-  useEffect(() => {
-    if (!hasMore || isLoading || !sentinelRef.current) {
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || isLoading) {
       return
     }
 
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(
+        `/api/feed?cursor=${encodeURIComponent(nextCursor)}&limit=${FEED_PAGE_SIZE}`,
+        { cache: 'no-store' }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to load feed')
+      }
+
+      const page = (await response.json()) as FeedPage
+
+      setItems((current) => mergeFeedItems(current, page.items))
+      setNextCursor(page.next_cursor)
+    } catch {
+      setError('Failed to load more pull requests.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [nextCursor, isLoading])
+
+  useEffect(() => {
     const node = sentinelRef.current
+
+    if (!node || !nextCursor) {
+      return
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries
-        if (!entry?.isIntersecting || isLoading || !nextCursor) {
-          return
+        if (entry?.isIntersecting) {
+          void loadMore()
         }
-
-        setIsLoading(true)
-        setError(null)
-
-        void fetch(`/api/feed?cursor=${encodeURIComponent(nextCursor)}`, {
-          cache: 'no-store',
-        })
-          .then(async (response) => {
-            if (!response.ok) {
-              throw new Error('Failed to load feed')
-            }
-
-            return (await response.json()) as FeedPage
-          })
-          .then((page) => {
-            setItems((current) => mergeFeedItems(current, page.items))
-            setNextCursor(page.next_cursor)
-          })
-          .catch(() => {
-            setError('Failed to load more pull requests.')
-          })
-          .finally(() => {
-            setIsLoading(false)
-          })
       },
       {
         rootMargin: '200px 0px',
@@ -80,7 +86,7 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
     return () => {
       observer.disconnect()
     }
-  }, [hasMore, isLoading, nextCursor])
+  }, [loadMore, nextCursor])
 
   if (items.length === 0) {
     return (
@@ -100,7 +106,18 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
 
       {isLoading ? <FeedSkeleton /> : null}
 
-      {error ? <p className="py-4 text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <div className="flex items-center justify-center gap-2 py-4 text-sm text-destructive">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            className="underline hover:text-destructive/80"
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
 
       {!hasMore && !isLoading ? (
         <p className="py-6 text-sm text-muted-foreground">You are all caught up.</p>

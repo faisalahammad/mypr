@@ -56,7 +56,6 @@ const feedPR: FeedPR = {
     github_avatar_url: null,
     display_name: 'Go Codebox',
   },
-  score: 1,
 }
 
 describe('PRFeedCard', () => {
