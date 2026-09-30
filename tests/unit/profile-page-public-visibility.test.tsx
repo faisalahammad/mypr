@@ -7,6 +7,8 @@ const mockUnstableCache = jest.fn((fn: () => unknown) => fn)
 const mockCreateSupabasePublicClient = jest.fn()
 const mockGetUserProfile = jest.fn()
 const mockRpc = jest.fn()
+let mockFrom: jest.Mock
+let mockAvatarUrl: string | null
 
 jest.mock('next/cache', () => ({
   unstable_cache: (fn: () => unknown) => mockUnstableCache(fn),
@@ -43,6 +45,7 @@ describe('profile page public repo visibility', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetUserProfile.mockResolvedValue(null)
+    mockAvatarUrl = 'https://example.com/alice.png'
 
     mockRpc.mockResolvedValue({
       data: [
@@ -55,7 +58,7 @@ describe('profile page public repo visibility', () => {
       error: null,
     })
 
-    const mockFrom = jest.fn((table: string) => {
+    mockFrom = jest.fn((table: string) => {
       if (table === 'profiles') {
         return {
           select: jest.fn(() => ({
@@ -64,7 +67,7 @@ describe('profile page public repo visibility', () => {
                 data: {
                   id: 'user-1',
                   github_username: 'alice',
-                  github_avatar_url: 'https://example.com/alice.png',
+                  github_avatar_url: mockAvatarUrl,
                   display_name: 'Alice',
                 },
                 error: null,
@@ -163,7 +166,7 @@ describe('profile page public repo visibility', () => {
     })
   })
 
-  it('generates MyPR-branded profile metadata', async () => {
+  it('generates MyPR-branded profile metadata with the GitHub avatar image', async () => {
     const { generateMetadata } = await import('@/app/[username]/page')
 
     const metadata = await generateMetadata({
@@ -176,6 +179,47 @@ describe('profile page public repo visibility', () => {
       openGraph: {
         title: 'Alice (@alice) | MyPR',
         description: "View Alice's pull request portfolio on MyPR.",
+        type: 'profile',
+        url: '/alice',
+        images: [
+          {
+            url: 'https://example.com/alice.png',
+            width: 460,
+            height: 460,
+            alt: "Alice's GitHub avatar",
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary',
+        title: 'Alice (@alice) | MyPR',
+        description: "View Alice's pull request portfolio on MyPR.",
+        images: ['https://example.com/alice.png'],
+      },
+    })
+  })
+
+  it('falls back to the site OG image when the profile has no avatar', async () => {
+    const { generateMetadata } = await import('@/app/[username]/page')
+    mockAvatarUrl = null
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ username: 'alice' }),
+    } as never)
+
+    expect(metadata).toMatchObject({
+      openGraph: {
+        images: [
+          {
+            url: '/og-placeholder.jpg',
+            width: 1200,
+            height: 630,
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        images: ['/og-placeholder.jpg'],
       },
     })
   })

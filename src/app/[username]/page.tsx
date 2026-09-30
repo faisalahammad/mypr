@@ -156,14 +156,38 @@ export async function generateMetadata({ params }: ProfilePageProps) {
   }
 
   const displayName = profile.display_name || profile.github_username
+  const title = `${displayName} (@${profile.github_username}) | MyPR`
+  const description = `View ${displayName}'s pull request portfolio on MyPR.`
+
+  // GitHub caps avatars at 460x460; fall back to the site OG image when a
+  // profile has no avatar so social platforms never render a blank card.
+  const avatar = profile.github_avatar_url
+  const image = avatar ?? '/og-placeholder.jpg'
+  const imageDimensions = avatar ? { width: 460, height: 460 } : { width: 1200, height: 630 }
 
   return {
-    title: `${displayName} (@${profile.github_username}) | MyPR`,
-    description: `View ${displayName}'s pull request portfolio on MyPR.`,
+    title,
+    description,
     openGraph: {
-      title: `${displayName} (@${profile.github_username}) | MyPR`,
-      description: `View ${displayName}'s pull request portfolio on MyPR.`,
-      images: profile.github_avatar_url ? [profile.github_avatar_url] : [],
+      title,
+      description,
+      type: 'profile',
+      url: `/${profile.github_username}`,
+      images: [
+        {
+          url: image,
+          ...imageDimensions,
+          alt: avatar ? `${displayName}'s GitHub avatar` : 'MyPR — pull request portfolios for developers',
+        },
+      ],
+    },
+    twitter: {
+      // Square avatars render best as a square thumbnail; the 1200x630 site
+      // fallback suits the wide card instead.
+      card: avatar ? 'summary' : 'summary_large_image',
+      title,
+      description,
+      images: [image],
     },
   }
 }
