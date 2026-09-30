@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ProfileResults } from '@/components/profile/ProfileResults'
 import type { ProfileResultsModel } from '@/lib/profile-results'
 
-const mockDownloadAsImage = jest.fn(() => Promise.resolve())
+const mockDownloadAsImage = jest.fn<Promise<void>, unknown[]>(() => Promise.resolve())
 
 jest.mock('@/lib/utils', () => ({
   cn: (...inputs: Array<string | false | null | undefined>) => inputs.filter(Boolean).join(' '),

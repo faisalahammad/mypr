@@ -7,7 +7,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { DownloadableTimeline } from '@/components/timeline/DownloadableTimeline'
 
 // Mock downloadAsImage so tests don't touch html2canvas or DOM link creation
-const mockDownloadAsImage = jest.fn(() => Promise.resolve())
+const mockDownloadAsImage = jest.fn<Promise<void>, unknown[]>(() => Promise.resolve())
 jest.mock('@/lib/utils', () => ({
   ...jest.requireActual('@/lib/utils'),
   downloadAsImage: (...args: unknown[]) => mockDownloadAsImage(...args)

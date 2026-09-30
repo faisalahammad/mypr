@@ -1,4 +1,5 @@
 import { POST as updateRepoVisibility } from '@/app/api/repos/route'
+import type { NextRequest } from 'next/server'
 
 const mockRevalidateTag = jest.fn()
 const mockRevalidatePath = jest.fn()
@@ -94,7 +95,7 @@ describe('profile cache invalidation', () => {
         repo_full_name: 'vercel/next.js',
         is_active: true,
       }),
-    } as Request
+    } as unknown as NextRequest
 
     const response = await updateRepoVisibility(request)
 

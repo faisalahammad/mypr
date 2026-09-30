@@ -44,7 +44,7 @@ describe('Auto-Sync Cron Job', () => {
   describe('CRON_SECRET authorization', () => {
     it('should reject requests without valid CRON_SECRET', () => {
       const cronSecret = 'my-secret-token'
-      const authHeader = 'Bearer wrong-token'
+      const authHeader: string = 'Bearer wrong-token'
 
       const isAuthorized = !cronSecret || authHeader === `Bearer ${cronSecret}`
       expect(isAuthorized).toBe(false)

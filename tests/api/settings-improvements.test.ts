@@ -71,7 +71,7 @@ describe('Settings Page Improvements', () => {
     })
 
     it('should default auto_sync_enabled to false when no sync_metadata exists', () => {
-      const typedMeta = null
+      const typedMeta = null as { auto_sync_enabled?: boolean } | null
       const auto_sync_enabled = typedMeta?.auto_sync_enabled ?? false
 
       expect(auto_sync_enabled).toBe(false)
@@ -179,7 +179,7 @@ describe('Settings Page Improvements', () => {
   // ──────────────────────────────────────────────
   describe('New repository defaults', () => {
     it('should default is_active to false for new repos (existingRepo is null)', () => {
-      const existingRepo = null
+      const existingRepo = null as { is_active?: boolean } | null
       const is_active = existingRepo?.is_active ?? false
 
       expect(is_active).toBe(false)
