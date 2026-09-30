@@ -1,3 +1,4 @@
+import { getCachedCursorFeed, setCachedCursorFeed } from '@/lib/feed-cursor-cache'
 import { buildFeed, FEED_PAGE_SIZE, getCachedFeed, setCachedFeed } from '@/lib/feed'
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,7 +19,13 @@ export async function GET(request: NextRequest) {
   const limit = requestedLimit > 0 ? Math.min(Math.floor(requestedLimit), 50) : FEED_PAGE_SIZE
 
   if (cursor) {
+    const cachedCursorFeed = getCachedCursorFeed(session.user.id, cursor, limit)
+    if (cachedCursorFeed) {
+      return NextResponse.json(cachedCursorFeed)
+    }
+
     const feed = await buildFeed(supabase, session.user.id, cursor, limit)
+    setCachedCursorFeed(session.user.id, cursor, limit, feed)
     return NextResponse.json(feed)
   }
 
