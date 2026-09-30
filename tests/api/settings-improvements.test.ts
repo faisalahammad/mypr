@@ -2,7 +2,6 @@
  * Tests for settings page improvements:
  * - Sync metadata schema (auto_sync_enabled field)
  * - GET /api/sync-prs response includes auto_sync_enabled
- * - PATCH /api/sync-prs request/response validation
  * - Date range persistence logic
  * - formatDate hydration safety
  * - RepoCard props & new repos default to inactive
@@ -70,61 +69,19 @@ describe('Settings Page Improvements', () => {
       expect(typeof response.auto_sync_enabled).toBe('boolean')
     })
 
-    it('should default auto_sync_enabled to false when no sync_metadata exists', () => {
+    it('should default auto_sync_enabled to true when no sync_metadata exists', () => {
+      // Auto-sync is forced on for every user, so a missing row means enabled
       const typedMeta = null as { auto_sync_enabled?: boolean } | null
-      const auto_sync_enabled = typedMeta?.auto_sync_enabled ?? false
+      const auto_sync_enabled = typedMeta?.auto_sync_enabled ?? true
 
-      expect(auto_sync_enabled).toBe(false)
+      expect(auto_sync_enabled).toBe(true)
     })
 
     it('should preserve auto_sync_enabled=true when set', () => {
       const typedMeta = { last_date_range: '6m', auto_sync_enabled: true }
-      const auto_sync_enabled = typedMeta?.auto_sync_enabled ?? false
+      const auto_sync_enabled = typedMeta?.auto_sync_enabled ?? true
 
       expect(auto_sync_enabled).toBe(true)
-    })
-  })
-
-  // ──────────────────────────────────────────────
-  // 3. PATCH /api/sync-prs request validation
-  // ──────────────────────────────────────────────
-  describe('PATCH /api/sync-prs auto-sync toggle', () => {
-    it('should accept valid boolean auto_sync_enabled', () => {
-      const validPayloads = [
-        { auto_sync_enabled: true },
-        { auto_sync_enabled: false },
-      ]
-
-      for (const payload of validPayloads) {
-        expect(typeof payload.auto_sync_enabled).toBe('boolean')
-      }
-    })
-
-    it('should reject non-boolean auto_sync_enabled', () => {
-      const invalidPayloads = [
-        { auto_sync_enabled: 'yes' },
-        { auto_sync_enabled: 1 },
-        { auto_sync_enabled: null },
-        { auto_sync_enabled: undefined },
-      ]
-
-      for (const payload of invalidPayloads) {
-        expect(typeof payload.auto_sync_enabled !== 'boolean').toBe(true)
-      }
-    })
-
-    it('should return correct response structure on success', () => {
-      const successResponse = {
-        success: true,
-        auto_sync_enabled: true,
-        message: 'Auto-sync enabled',
-      }
-
-      expect(successResponse).toMatchObject({
-        success: true,
-        auto_sync_enabled: expect.any(Boolean),
-        message: expect.any(String),
-      })
     })
   })
 
@@ -142,7 +99,7 @@ describe('Settings Page Improvements', () => {
     ]
 
     it('should restore dateRange from syncInfo.last_date_range', () => {
-      const syncInfo = { last_date_range: '12m', auto_sync_enabled: false }
+      const syncInfo = { last_date_range: '12m' }
       let dateRange: DateRange = '3m' // default
 
       if (syncInfo.last_date_range) {
@@ -153,7 +110,7 @@ describe('Settings Page Improvements', () => {
     })
 
     it('should keep default when last_date_range is null', () => {
-      const syncInfo = { last_date_range: null, auto_sync_enabled: false }
+      const syncInfo = { last_date_range: null }
       let dateRange: DateRange = '3m'
 
       if (syncInfo.last_date_range) {

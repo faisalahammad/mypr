@@ -1,24 +1,20 @@
 import { createSupabaseServiceClient } from '@/lib/supabase'
 import { syncUserPRs, type SyncResult } from '@/lib/sync-user'
-import type { DateRange } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
 
-interface AutoSyncUser {
-  user_id: string
-  last_date_range: string | null
-  profiles: {
-    id: string
-    github_username: string
-    github_access_token: string | null
-  } | null
+interface AutoSyncProfile {
+  id: string
+  github_username: string
+  github_access_token: string | null
 }
 
 /**
  * GET /api/cron/auto-sync
  *
- * Vercel Cron Job handler — runs hourly via vercel.json schedule.
- * Queries all users with auto_sync_enabled=true, then syncs their
- * PRs and repos using the shared syncUserPRs logic.
+ * Vercel Cron Job handler — runs daily at 00:00 UTC via vercel.json schedule.
+ * Auto-sync is forced on for every registered user: all profiles with a
+ * GitHub token are synced with the "lifetime" date range. Their manually
+ * chosen date range in sync_metadata is preserved (persistDateRange: false).
  *
  * Security: Protected by CRON_SECRET header validation.
  * Vercel automatically sends this header for cron-triggered requests.
@@ -38,34 +34,26 @@ export async function GET(request: NextRequest) {
   try {
     const serviceClient = createSupabaseServiceClient()
 
-    // Find all users with auto-sync enabled
-    const { data: autoSyncUsers, error: queryError } = await serviceClient
-      .from('sync_metadata')
-      .select(`
-        user_id,
-        last_date_range,
-        profiles (
-          id,
-          github_username,
-          github_access_token
-        )
-      `)
-      .eq('auto_sync_enabled', true)
+    // Sync every registered user with a GitHub access token
+    const { data: profiles, error: queryError } = await serviceClient
+      .from('profiles')
+      .select('id, github_username, github_access_token')
+      .not('github_access_token', 'is', null)
 
     if (queryError) {
-      console.error('[auto-sync cron] Error querying auto-sync users:', queryError)
+      console.error('[auto-sync cron] Error querying profiles:', queryError)
       return NextResponse.json(
         { error: 'Database error', message: queryError.message },
         { status: 500 }
       )
     }
 
-    const users = (autoSyncUsers ?? []) as unknown as AutoSyncUser[]
+    const users = (profiles ?? []) as unknown as AutoSyncProfile[]
 
     if (users.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No users with auto-sync enabled',
+        message: 'No registered users to sync',
         users_processed: 0,
         results: [],
       })
@@ -75,16 +63,11 @@ export async function GET(request: NextRequest) {
 
     // Process each user sequentially to avoid overwhelming GitHub API rate limits
     for (const user of users) {
-      if (!user.profiles) {
-        console.warn(`[auto-sync cron] No profile found for user_id: ${user.user_id}`)
-        continue
-      }
-
-      if (!user.profiles.github_access_token) {
-        console.warn(`[auto-sync cron] No GitHub token for user: ${user.profiles.github_username}`)
+      if (!user.github_access_token) {
+        console.warn(`[auto-sync cron] No GitHub token for user: ${user.github_username}`)
         results.push({
-          user_id: user.user_id,
-          github_username: user.profiles.github_username,
+          user_id: user.id,
+          github_username: user.github_username,
           synced: 0,
           repos_found: 0,
           error: 'No GitHub access token',
@@ -92,24 +75,22 @@ export async function GET(request: NextRequest) {
         continue
       }
 
-      // Use the user's last saved date range, default to 3m
-      const dateRange: DateRange = (user.last_date_range as DateRange) || '3m'
-
-      console.log(`[auto-sync cron] Syncing user: ${user.profiles.github_username} (range: ${dateRange})`)
+      console.log(`[auto-sync cron] Syncing user: ${user.github_username} (range: lifetime)`)
 
       const result = await syncUserPRs(
         {
-          id: user.profiles.id,
-          github_username: user.profiles.github_username,
-          github_access_token: user.profiles.github_access_token,
+          id: user.id,
+          github_username: user.github_username,
+          github_access_token: user.github_access_token,
         },
-        dateRange
+        'lifetime',
+        { persistDateRange: false }
       )
 
       results.push(result)
 
       console.log(
-        `[auto-sync cron] Completed: ${user.profiles.github_username} — ${result.synced} PRs, ${result.repos_found} repos`
+        `[auto-sync cron] Completed: ${user.github_username} — ${result.synced} PRs, ${result.repos_found} repos`
       )
     }
 

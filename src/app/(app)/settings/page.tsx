@@ -181,8 +181,6 @@ export default function SettingsPage() {
   const [pendingRepos, setPendingRepos] = useState<Record<string, boolean>>({})
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange>('3m')
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
-  const [isAutoSyncUpdating, setIsAutoSyncUpdating] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
 
   const persistedRangeLabel = getRangeLabel(syncInfo?.last_date_range ?? null)
@@ -349,37 +347,12 @@ export default function SettingsPage() {
     Promise.allSettled([fetchRepos(), fetchSyncStatus()])
   }, [fetchRepos, fetchSyncStatus])
 
-  // Restore persisted date range and auto-sync preference
+  // Restore persisted date range
   useEffect(() => {
     if (syncInfo?.last_date_range) {
       setDateRange(syncInfo.last_date_range as DateRange)
     }
-    if (syncInfo?.auto_sync_enabled !== undefined) {
-      setAutoSyncEnabled(syncInfo.auto_sync_enabled)
-    }
   }, [syncInfo])
-
-  const handleAutoSyncToggle = async (nextValue: boolean) => {
-    if (isAutoSyncUpdating) return
-    setIsAutoSyncUpdating(true)
-    const previous = autoSyncEnabled
-    setAutoSyncEnabled(nextValue)
-    try {
-      const response = await fetch('/api/sync-prs', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auto_sync_enabled: nextValue }),
-      })
-      const data = await response.json()
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Failed to update auto-sync')
-      }
-    } catch {
-      setAutoSyncEnabled(previous)
-    } finally {
-      setIsAutoSyncUpdating(false)
-    }
-  }
 
   const repoStats = useMemo(() => {
     const totalRepos = repos.length
@@ -445,25 +418,11 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="overflow-visible border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">Sync your data</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Choose a date range, then refresh both PR history and repository cache in one pass.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background/90 px-4 py-2.5">
-                <div className="text-right">
-                  <p className="text-xs font-medium text-foreground">Auto sync</p>
-                  <p className="text-[11px] text-muted-foreground">Sync daily</p>
-                </div>
-                <Switch
-                  aria-label="Toggle auto sync"
-                  checked={autoSyncEnabled}
-                  disabled={isAutoSyncUpdating}
-                  onCheckedChange={handleAutoSyncToggle}
-                />
-              </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Sync your data</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your lifetime PRs sync automatically every day. You can also sync a specific time frame by picking a range below and clicking Sync PRs.
+              </p>
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

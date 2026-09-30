@@ -5,21 +5,19 @@
  * - CRON_SECRET validation
  * - Cron response schema for various scenarios
  * - Shared syncUserPRs result structure
- * - User filtering logic (auto_sync_enabled=true)
+ * - User selection (all registered users with a GitHub token)
  * - vercel.json cron schedule
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
+
 import type { SyncResult } from '@/lib/sync-user'
 
-// Simulate vercel.json content
-const vercelConfig = {
-  crons: [
-    {
-      path: '/api/cron/auto-sync',
-      schedule: '0 * * * *',
-    },
-  ],
-}
+// Read the real vercel.json so the schedule assertion can't drift from deployment
+const vercelConfig = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), 'vercel.json'), 'utf-8')
+) as { crons: Array<{ path: string; schedule: string }> }
 
 describe('Auto-Sync Cron Job', () => {
 
@@ -32,9 +30,9 @@ describe('Auto-Sync Cron Job', () => {
       expect(cronEntry).toBeDefined()
     })
 
-    it('should run on an hourly schedule (0 * * * *)', () => {
+    it('should run on a daily schedule (0 0 * * *)', () => {
       const cronEntry = vercelConfig.crons[0]
-      expect(cronEntry.schedule).toBe('0 * * * *')
+      expect(cronEntry.schedule).toBe('0 0 * * *')
     })
   })
 
@@ -68,73 +66,49 @@ describe('Auto-Sync Cron Job', () => {
   })
 
   // ──────────────────────────────────────────────
-  // 3. Auto-sync user filtering
+  // 3. User selection (auto-sync is forced on)
   // ──────────────────────────────────────────────
-  describe('User filtering', () => {
-    interface MockSyncMetadata {
-      user_id: string
-      auto_sync_enabled: boolean
-      last_date_range: string | null
-      profiles: { github_username: string; github_access_token: string | null } | null
+  describe('User selection', () => {
+    interface MockProfile {
+      id: string
+      github_username: string
+      github_access_token: string | null
     }
 
-    const mockUsers: MockSyncMetadata[] = [
-      {
-        user_id: 'user-1',
-        auto_sync_enabled: true,
-        last_date_range: '12m',
-        profiles: { github_username: 'alice', github_access_token: 'token-1' },
-      },
-      {
-        user_id: 'user-2',
-        auto_sync_enabled: false,
-        last_date_range: '3m',
-        profiles: { github_username: 'bob', github_access_token: 'token-2' },
-      },
-      {
-        user_id: 'user-3',
-        auto_sync_enabled: true,
-        last_date_range: null,
-        profiles: { github_username: 'carol', github_access_token: null },
-      },
-      {
-        user_id: 'user-4',
-        auto_sync_enabled: true,
-        last_date_range: '6m',
-        profiles: null,
-      },
+    const mockProfiles: MockProfile[] = [
+      { id: 'user-1', github_username: 'alice', github_access_token: 'token-1' },
+      { id: 'user-2', github_username: 'bob', github_access_token: 'token-2' },
+      { id: 'user-3', github_username: 'carol', github_access_token: null },
     ]
 
-    it('should filter to only auto_sync_enabled=true users', () => {
-      const autoSyncUsers = mockUsers.filter((u) => u.auto_sync_enabled)
-      expect(autoSyncUsers).toHaveLength(3)
-      expect(autoSyncUsers.every((u) => u.auto_sync_enabled)).toBe(true)
+    it('should select every registered profile (no opt-in filter)', () => {
+      // The cron queries all profiles directly; auto_sync_enabled is no longer
+      // a filter, so users who never touched settings are still synced
+      const selected = mockProfiles
+      expect(selected).toHaveLength(3)
     })
 
-    it('should skip users without a profile', () => {
-      const autoSyncUsers = mockUsers.filter((u) => u.auto_sync_enabled)
-      const processable = autoSyncUsers.filter((u) => u.profiles !== null)
-      expect(processable).toHaveLength(2) // user-1 and user-3
+    it('should record an error result for users without a GitHub token', () => {
+      const results: SyncResult[] = []
+      for (const user of mockProfiles) {
+        if (!user.github_access_token) {
+          results.push({
+            user_id: user.id,
+            github_username: user.github_username,
+            synced: 0,
+            repos_found: 0,
+            error: 'No GitHub access token',
+          })
+        }
+      }
+      expect(results).toHaveLength(1) // only carol
+      expect(results[0].github_username).toBe('carol')
     })
 
-    it('should skip users without a GitHub token', () => {
-      const autoSyncUsers = mockUsers.filter((u) => u.auto_sync_enabled)
-      const withToken = autoSyncUsers.filter(
-        (u) => u.profiles !== null && u.profiles.github_access_token !== null
-      )
-      expect(withToken).toHaveLength(1) // only user-1
-    })
-
-    it('should default to 3m when last_date_range is null', () => {
-      const user = mockUsers[2] // carol, last_date_range is null
-      const dateRange = user.last_date_range || '3m'
-      expect(dateRange).toBe('3m')
-    })
-
-    it('should use persisted last_date_range when available', () => {
-      const user = mockUsers[0] // alice, last_date_range is 12m
-      const dateRange = user.last_date_range || '3m'
-      expect(dateRange).toBe('12m')
+    it('should always sync with the lifetime date range', () => {
+      // The cron passes 'lifetime' explicitly, ignoring any saved range
+      const cronDateRange = 'lifetime'
+      expect(cronDateRange).toBe('lifetime')
     })
   })
 
@@ -177,10 +151,10 @@ describe('Auto-Sync Cron Job', () => {
   // 5. Cron response schema
   // ──────────────────────────────────────────────
   describe('Cron response schema', () => {
-    it('should return correct shape when no users have auto-sync', () => {
+    it('should return correct shape when no registered users exist', () => {
       const response = {
         success: true,
-        message: 'No users with auto-sync enabled',
+        message: 'No registered users to sync',
         users_processed: 0,
         results: [],
       }

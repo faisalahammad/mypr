@@ -18,6 +18,15 @@ export interface SyncResult {
   error?: string
 }
 
+interface SyncUserOptions {
+  /**
+   * When false, the user's saved last_date_range in sync_metadata is left
+   * untouched (used by the cron so its lifetime sync doesn't overwrite
+   * the range the user picked for manual syncs).
+   */
+  persistDateRange?: boolean
+}
+
 /**
  * Core sync logic extracted for reuse by both the manual POST handler
  * and the automated cron job.
@@ -27,8 +36,10 @@ export interface SyncResult {
  */
 export async function syncUserPRs(
   profile: SyncUserProfile,
-  dateRange: DateRange
+  dateRange: DateRange,
+  options: SyncUserOptions = {}
 ): Promise<SyncResult> {
+  const { persistDateRange = true } = options
   const serviceClient = createSupabaseServiceClient()
   const now = new Date().toISOString()
 
@@ -126,16 +137,18 @@ export async function syncUserPRs(
     }
 
     // Update sync metadata timestamp
-    const { error: metaError } = await serviceClient
-      .from('sync_metadata')
-      .upsert({
-        user_id: profile.id,
-        last_date_range: dateRange,
-        updated_at: now,
-      } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
+    if (persistDateRange) {
+      const { error: metaError } = await serviceClient
+        .from('sync_metadata')
+        .upsert({
+          user_id: profile.id,
+          last_date_range: dateRange,
+          updated_at: now,
+        } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
 
-    if (metaError) {
-      console.error('[auto-sync] Error upserting sync metadata:', metaError)
+      if (metaError) {
+        console.error('[auto-sync] Error upserting sync metadata:', metaError)
+      }
     }
 
     // Invalidate feed caches for the user and their followers
