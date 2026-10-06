@@ -1,5 +1,5 @@
 import { createSupabaseServiceClient } from '@/lib/supabase'
-import { searchMergedPRs, getPRSummary, type DateRange } from '@/lib/github'
+import { searchMergedPRs, getPRSummary, getPRKey, type DateRange } from '@/lib/github'
 import { getProfileResultsTag } from '@/lib/profile-results'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
@@ -25,6 +25,12 @@ interface SyncUserOptions {
    * the range the user picked for manual syncs).
    */
   persistDateRange?: boolean
+  /**
+   * When true, PRs already in pull_requests are not fetched again. Merged PRs
+   * don't change, so the daily lifetime cron only pays for new ones, and a run
+   * cut off by the function timeout picks up where it stopped the next day.
+   */
+  skipCachedPRs?: boolean
 }
 
 /**
@@ -39,18 +45,54 @@ export async function syncUserPRs(
   dateRange: DateRange,
   options: SyncUserOptions = {}
 ): Promise<SyncResult> {
-  const { persistDateRange = true } = options
+  const { persistDateRange = true, skipCachedPRs = false } = options
   const serviceClient = createSupabaseServiceClient()
   const now = new Date().toISOString()
 
+  // Record when the user was last synced, even when nothing new was found.
+  // The range is only saved when persistDateRange is set.
+  const recordSyncTime = async () => {
+    const { error: metaError } = await serviceClient
+      .from('sync_metadata')
+      .upsert({
+        user_id: profile.id,
+        updated_at: now,
+        ...(persistDateRange ? { last_date_range: dateRange } : {}),
+      } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
+
+    if (metaError) {
+      console.error('[auto-sync] Error upserting sync metadata:', metaError)
+    }
+  }
+
   try {
+    const cachedPRs = new Set<string>()
+
+    if (skipCachedPRs) {
+      // ponytail: PostgREST caps this at max-rows (1000); past that, extra PRs are just re-fetched
+      const { data: cached, error: cachedError } = await serviceClient
+        .from('pull_requests')
+        .select('repo_full_name, pr_number')
+        .eq('user_id', profile.id)
+
+      if (cachedError) {
+        throw new Error(`Failed to read cached PRs: ${cachedError.message}`)
+      }
+
+      for (const pr of (cached ?? []) as Array<{ repo_full_name: string; pr_number: number }>) {
+        cachedPRs.add(getPRKey(pr.repo_full_name, pr.pr_number))
+      }
+    }
+
     const reposWithPRs = await searchMergedPRs(
       profile.github_access_token,
       profile.github_username,
-      dateRange
+      dateRange,
+      cachedPRs
     )
 
     if (reposWithPRs.length === 0) {
+      await recordSyncTime()
       return {
         user_id: profile.id,
         github_username: profile.github_username,
@@ -136,20 +178,7 @@ export async function syncUserPRs(
         .eq('repo_full_name', repo_full_name)
     }
 
-    // Update sync metadata timestamp
-    if (persistDateRange) {
-      const { error: metaError } = await serviceClient
-        .from('sync_metadata')
-        .upsert({
-          user_id: profile.id,
-          last_date_range: dateRange,
-          updated_at: now,
-        } as Database['public']['Tables']['sync_metadata']['Insert'] as never)
-
-      if (metaError) {
-        console.error('[auto-sync] Error upserting sync metadata:', metaError)
-      }
-    }
+    await recordSyncTime()
 
     // Invalidate feed caches for the user and their followers
     const { data: followers } = await serviceClient

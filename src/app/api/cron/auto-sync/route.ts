@@ -2,6 +2,13 @@ import { createSupabaseServiceClient } from '@/lib/supabase'
 import { syncUserPRs, type SyncResult } from '@/lib/sync-user'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Vercel kills the invocation after this many seconds; every user must fit in it
+export const maxDuration = 300
+
+// Users sync with their own GitHub tokens, so they can run side by side
+// without sharing GitHub rate limits
+const USER_CONCURRENCY = 5
+
 interface AutoSyncProfile {
   id: string
   github_username: string
@@ -11,10 +18,11 @@ interface AutoSyncProfile {
 /**
  * GET /api/cron/auto-sync
  *
- * Vercel Cron Job handler — runs daily at 00:00 UTC via vercel.json schedule.
- * Auto-sync is forced on for every registered user: all profiles with a
- * GitHub token are synced with the "lifetime" date range. Their manually
- * chosen date range in sync_metadata is preserved (persistDateRange: false).
+ * Vercel Cron Job handler — runs daily at 00:00 UTC (06:00 Bangladesh time)
+ * via vercel.json schedule. Auto-sync is forced on for every registered user:
+ * all profiles with a GitHub token are synced with the "lifetime" date range,
+ * fetching only PRs that aren't cached yet. Their manually chosen date range
+ * in sync_metadata is preserved (persistDateRange: false).
  *
  * Security: Protected by CRON_SECRET header validation.
  * Vercel automatically sends this header for cron-triggered requests.
@@ -59,20 +67,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const results: SyncResult[] = []
-
-    // Process each user sequentially to avoid overwhelming GitHub API rate limits
-    for (const user of users) {
+    const syncUser = async (user: AutoSyncProfile): Promise<SyncResult> => {
       if (!user.github_access_token) {
         console.warn(`[auto-sync cron] No GitHub token for user: ${user.github_username}`)
-        results.push({
+        return {
           user_id: user.id,
           github_username: user.github_username,
           synced: 0,
           repos_found: 0,
           error: 'No GitHub access token',
-        })
-        continue
+        }
       }
 
       console.log(`[auto-sync cron] Syncing user: ${user.github_username} (range: lifetime)`)
@@ -84,14 +88,20 @@ export async function GET(request: NextRequest) {
           github_access_token: user.github_access_token,
         },
         'lifetime',
-        { persistDateRange: false }
+        { persistDateRange: false, skipCachedPRs: true }
       )
-
-      results.push(result)
 
       console.log(
         `[auto-sync cron] Completed: ${user.github_username} — ${result.synced} PRs, ${result.repos_found} repos`
       )
+
+      return result
+    }
+
+    const results: SyncResult[] = []
+
+    for (let i = 0; i < users.length; i += USER_CONCURRENCY) {
+      results.push(...(await Promise.all(users.slice(i, i + USER_CONCURRENCY).map(syncUser))))
     }
 
     const totalSynced = results.reduce((sum, r) => sum + r.synced, 0)

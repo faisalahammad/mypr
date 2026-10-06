@@ -122,15 +122,25 @@ export async function GET(request: NextRequest) {
       .eq('user_id', session.user.id)
 
     const typedRepos = (repos ?? []) as Array<{ last_synced_at: string | null }>
-    const lastSynced = typedRepos.length > 0 ? typedRepos[0].last_synced_at : null
 
     const { data: syncMeta } = await supabase
       .from('sync_metadata')
-      .select('last_date_range, auto_sync_enabled')
+      .select('last_date_range, auto_sync_enabled, updated_at')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    const typedMeta = syncMeta as { last_date_range: string | null; auto_sync_enabled: boolean } | null
+    const typedMeta = syncMeta as {
+      last_date_range: string | null
+      auto_sync_enabled: boolean
+      updated_at: string | null
+    } | null
+
+    // sync_metadata.updated_at moves on every sync, even when no repo changed
+    const syncTimes = [typedRepos[0]?.last_synced_at, typedMeta?.updated_at]
+      .filter((time): time is string => Boolean(time))
+    const lastSynced = syncTimes.length > 0
+      ? new Date(Math.max(...syncTimes.map((time) => Date.parse(time)))).toISOString()
+      : null
 
     return NextResponse.json({
       last_synced: lastSynced,

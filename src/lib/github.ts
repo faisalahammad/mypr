@@ -208,10 +208,18 @@ export interface RepoWithPRs {
   prs: MergedPR[]
 }
 
+// Identifies a PR across repos, e.g. "owner/repo#123"
+export const getPRKey = (repoFullName: string, prNumber: number) => `${repoFullName}#${prNumber}`
+
+/**
+ * PRs whose getPRKey is in skipPRs are left out before their details are
+ * fetched, and repos with no remaining PRs are dropped from the result.
+ */
 export const searchMergedPRs = async (
   accessToken: string,
   username: string,
-  dateRange: DateRange
+  dateRange: DateRange,
+  skipPRs: ReadonlySet<string> = new Set()
 ): Promise<RepoWithPRs[]> => {
   const octokit = createOctokit(accessToken)
   const dateStart = getDateRangeStart(dateRange)
@@ -246,12 +254,16 @@ export const searchMergedPRs = async (
     if (page * perPage >= 1000) break
   }
 
-  // Filter to only truly merged PRs (search returns closed too sometimes)
-  const mergedItems = allItems.filter(item => item.pull_request?.merged_at)
-
   // Extract repo full name from repository_url
   // e.g. https://api.github.com/repos/owner/repo → owner/repo
   const extractRepoName = (url: string) => url.replace('https://api.github.com/repos/', '')
+
+  // Filter to only truly merged PRs (search returns closed too sometimes)
+  // that the caller doesn't already have
+  const mergedItems = allItems.filter(item =>
+    item.pull_request?.merged_at &&
+    !skipPRs.has(getPRKey(extractRepoName(item.repository_url), item.number))
+  )
 
   // Fetch PR details (additions/deletions/commits) in parallel batches
   // We batch to avoid flooding the API
