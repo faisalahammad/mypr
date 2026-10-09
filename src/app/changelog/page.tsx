@@ -25,7 +25,7 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
-    date: 'October 7, 2026',
+    date: 'October 10, 2026',
     items: [
       'Daily auto sync (6am Bangladesh time) runs reliably again for every user, picking up newly merged PRs',
       '"Last synced" in Settings now updates after every sync, even when no new PRs were found',
