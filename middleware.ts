@@ -36,7 +36,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getClaims verifies the JWT locally against the project's ES256 JWKS (no
+  // Auth round trip per request) and still refreshes expired sessions.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims ?? null
 
   // Protected routes that require authentication
   const protectedRoutes = ['/feed', '/settings']
@@ -45,7 +48,7 @@ export async function middleware(request: NextRequest) {
   // Public routes that should redirect to feed if authenticated
   const isPublicRoute = pathname === '/login'
 
-  // Short-circuit non-auth paths - no Supabase auth network call
+  // Non-auth paths only needed the session refresh above
   if (!isProtectedRoute && !isPublicRoute) {
     return response
   }

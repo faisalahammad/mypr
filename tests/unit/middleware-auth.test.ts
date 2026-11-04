@@ -13,8 +13,8 @@ describe('auth middleware', () => {
   it('redirects unauthenticated users from feed to login with a redirect hint', async () => {
     ;(createServerClient as jest.Mock).mockReturnValue({
       auth: {
-        getUser: jest.fn().mockResolvedValue({
-          data: { user: null },
+        getClaims: jest.fn().mockResolvedValue({
+          data: null,
         }),
       },
     })
@@ -36,8 +36,8 @@ describe('auth middleware', () => {
   it('redirects authenticated users away from login to their requested member page', async () => {
     ;(createServerClient as jest.Mock).mockReturnValue({
       auth: {
-        getUser: jest.fn().mockResolvedValue({
-          data: { user: { id: 'user-1' } },
+        getClaims: jest.fn().mockResolvedValue({
+          data: { claims: { sub: 'user-1' } },
         }),
       },
     })

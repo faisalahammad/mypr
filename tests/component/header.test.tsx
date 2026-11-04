@@ -33,16 +33,18 @@ describe('Header', () => {
     expect(screen.getByText('MyPR')).toBeInTheDocument()
   })
 
-  it('disables prefetch for profile navigation links', () => {
+  // Default prefetch on the force-dynamic profile route loads only its loading.tsx
+  // shell, never page data, so settings changes cannot surface a stale profile.
+  it('prefetches the profile loading shell for instant navigation', () => {
     render(<Header username="faisalahammad" avatarUrl="https://example.com/avatar.png" />)
 
     const profileLinks = screen.getAllByRole('link', { name: /profile/i })
     const profileNavLink = profileLinks.find((link) => link.textContent?.includes('Profile'))
     expect(profileNavLink).toHaveAttribute('href', '/faisalahammad')
-    expect(profileNavLink).toHaveAttribute('data-prefetch', 'false')
+    expect(profileNavLink).toHaveAttribute('data-prefetch', 'true')
 
     const avatarLink = screen.getByRole('link', { name: /your profile/i })
     expect(avatarLink).toHaveAttribute('href', '/faisalahammad')
-    expect(avatarLink).toHaveAttribute('data-prefetch', 'false')
+    expect(avatarLink).toHaveAttribute('data-prefetch', 'true')
   })
 })

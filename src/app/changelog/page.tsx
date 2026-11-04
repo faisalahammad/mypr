@@ -27,6 +27,7 @@ const CHANGELOG: ChangelogEntry[] = [
   {
     date: 'November 5, 2026',
     items: [
+      'Pages load much faster: the app now runs next to its database in Singapore, and clicking a link shows a loading screen right away instead of freezing',
       'The profile activity grid now fills the full width and shows a tooltip on hover with the PR count and titles for that day',
       'New activity stats above the grid: PRs in the last year, active days, longest streak, and your busiest day',
       'The profile timeline now opens on your latest month. Pick a year and a month from the bar chart to see that month\'s PRs, and copy all of its PR links in one click',
