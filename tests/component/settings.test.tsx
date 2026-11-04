@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { TextDecoder, TextEncoder } from 'util'
 
 import SettingsPage from '@/app/(app)/settings/page'
 
@@ -9,6 +9,9 @@ jest.mock('@/lib/utils', () => ({
   cn: (...inputs: Array<string | false | null | undefined>) => inputs.filter(Boolean).join(' '),
   downloadAsImage: (...args: unknown[]) => mockDownloadAsImage(...args),
 }))
+
+// jsdom has no TextEncoder/TextDecoder; the sync stream reader needs them
+Object.assign(global, { TextDecoder, TextEncoder })
 
 global.fetch = jest.fn()
 
@@ -62,6 +65,23 @@ function getSummaryCardValue(label: string) {
   }
 
   return value.textContent
+}
+
+/** A fetch response that streams the given events as newline-delimited JSON */
+function streamResponse(events: object[]) {
+  const chunk = new TextEncoder().encode(`${events.map((event) => JSON.stringify(event)).join('\n')}\n`)
+  return {
+    ok: true,
+    headers: { get: () => 'application/x-ndjson; charset=utf-8' },
+    body: {
+      getReader: () => ({
+        read: jest
+          .fn()
+          .mockResolvedValueOnce({ done: false, value: chunk })
+          .mockResolvedValue({ done: true, value: undefined }),
+      }),
+    },
+  }
 }
 
 function mockInitialFetch({
@@ -291,27 +311,78 @@ describe('Settings Page', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 
-  it('posts the selected date range during sync', async () => {
+  it('has no date range picker and syncs the lifetime history from one button', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
     await screen.findByText('faisal/mypr')
 
-    fireEvent.change(screen.getByRole('combobox', { name: /date range/i }), {
-      target: { value: '6m' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /sync prs/i }))
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sync lifetime history' }))
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/sync-prs',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ dateRange: '6m' }),
-        })
+        expect.objectContaining({ method: 'POST' })
       )
     })
+    expect(
+      (global.fetch as jest.Mock).mock.calls.find(([url, init]) => url === '/api/sync-prs' && init?.method === 'POST')?.[1]
+    ).not.toHaveProperty('body')
+  })
+
+  it('lists the three sync steps before any sync has run', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    await screen.findByText('faisal/mypr')
+
+    const steps = within(screen.getByRole('list', { name: 'Sync steps' }))
+    expect(steps.getByText('Search GitHub')).toBeInTheDocument()
+    expect(steps.getByText('Read PR details')).toBeInTheDocument()
+    expect(steps.getByText('Save repositories')).toBeInTheDocument()
+  })
+
+  it('walks the steps with live counts while a sync streams in', async () => {
+    mockInitialFetch()
+    const baseFetch = (global.fetch as jest.Mock).getMockImplementation()!
+    ;(global.fetch as jest.Mock).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/sync-prs' && init?.method === 'POST') {
+        return Promise.resolve(streamResponse([
+          { stage: 'searching' },
+          { stage: 'details', done: 3, total: 3 },
+          { stage: 'saving', repo: 'faisal/mypr', prs: 2, done: 1, total: 2 },
+          { stage: 'saving', repo: 'faisal/private-repo', prs: 1, done: 2, total: 2 },
+          { stage: 'done', message: 'Synced 3 new merged PRs across 2 repos' },
+        ]))
+      }
+      return baseFetch(input, init)
+    })
+
+    render(<SettingsPage />)
+
+    await screen.findByText('faisal/mypr')
+    fireEvent.click(screen.getByRole('button', { name: 'Sync lifetime history' }))
+
+    expect(await screen.findByText('Synced 3 new merged PRs across 2 repos')).toBeInTheDocument()
+    const steps = within(screen.getByRole('list', { name: 'Sync steps' }))
+    expect(steps.getByText('3 new')).toBeInTheDocument()
+    expect(steps.getByText('3 read')).toBeInTheDocument()
+    expect(steps.getByText('2 saved')).toBeInTheDocument()
+  })
+
+  it('offers Try again and marks the stuck step when a sync fails', async () => {
+    mockInitialFetch({ syncOk: false })
+
+    render(<SettingsPage />)
+
+    await screen.findByText('faisal/mypr')
+    fireEvent.click(screen.getByRole('button', { name: 'Sync lifetime history' }))
+
+    expect(await screen.findByText('Failed to sync PRs')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
   it('optimistically toggles a repository in place and updates the enabled count', async () => {
@@ -445,20 +516,5 @@ describe('Settings Page', () => {
       { name: 'faisal/mypr', shown: true },
       { name: 'faisal/private-repo', shown: false },
     ])
-  })
-
-  it('supports selecting the 24 month and lifetime options', async () => {
-    const user = userEvent.setup()
-    mockInitialFetch()
-
-    render(<SettingsPage />)
-
-    await screen.findByText('faisal/mypr')
-
-    await user.selectOptions(screen.getByRole('combobox', { name: /date range/i }), '24m')
-    expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('24m')
-
-    await user.selectOptions(screen.getByRole('combobox', { name: /date range/i }), 'lifetime')
-    expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('lifetime')
   })
 })

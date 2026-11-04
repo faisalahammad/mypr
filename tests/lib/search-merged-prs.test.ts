@@ -1,6 +1,7 @@
 /**
- * searchMergedPRs must skip PRs the caller already has cached, so the daily
- * lifetime cron only fetches details for new PRs instead of every PR ever merged.
+ * searchMergedPRs searches a user's whole merged-PR history and must skip PRs the
+ * caller already has cached, so each sync only fetches details for new PRs
+ * instead of every PR ever merged.
  */
 
 const mockRequest = jest.fn()
@@ -41,16 +42,23 @@ const detailCalls = () => mockRequest.mock.calls.filter(([route]) => route === D
 
 describe('searchMergedPRs', () => {
   it('fetches every merged PR when nothing is cached', async () => {
-    const repos = await searchMergedPRs('token', 'octocat', 'lifetime')
+    const repos = await searchMergedPRs('token', 'octocat')
 
     expect(repos.map((r) => r.repo_full_name).sort()).toEqual(['a/one', 'b/two'])
     expect(detailCalls()).toHaveLength(3)
   })
 
+  it('searches the whole history with no date window', async () => {
+    await searchMergedPRs('token', 'octocat')
+
+    const searchCall = mockRequest.mock.calls.find(([route]) => route === 'GET /search/issues')
+    expect(searchCall?.[1].q).toBe('type:pr author:octocat is:merged')
+  })
+
   it('skips cached PRs and drops repos with nothing new', async () => {
     const cached = new Set([getPRKey('a/one', 1), getPRKey('b/two', 3)])
 
-    const repos = await searchMergedPRs('token', 'octocat', 'lifetime', cached)
+    const repos = await searchMergedPRs('token', 'octocat', cached)
 
     expect(repos).toHaveLength(1)
     expect(repos[0].repo_full_name).toBe('a/one')
@@ -61,7 +69,7 @@ describe('searchMergedPRs', () => {
   it('reports search and detail progress', async () => {
     const events: unknown[] = []
 
-    await searchMergedPRs('token', 'octocat', 'lifetime', new Set(), (event) => events.push(event))
+    await searchMergedPRs('token', 'octocat', new Set(), (event) => events.push(event))
 
     expect(events).toEqual([
       { stage: 'searching' },

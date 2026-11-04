@@ -4,10 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertCircle,
-  Calendar,
   Check,
   CheckCircle2,
-  ChevronDown,
+  Database,
   GitPullRequest,
   RefreshCw,
   Search,
@@ -19,65 +18,105 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppShell } from '@/components/layout/AppShell'
-import type { DateRange, SyncProgressEvent } from '@/lib/github'
+import type { SyncProgressEvent } from '@/lib/github'
 import { cn } from '@/lib/utils'
-
-const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
-  { value: '1m', label: 'Last 1 month' },
-  { value: '3m', label: 'Last 3 months' },
-  { value: '6m', label: 'Last 6 months' },
-  { value: '12m', label: 'Last 12 months' },
-  { value: '24m', label: 'Last 24 months' },
-  { value: 'lifetime', label: 'Lifetime' },
-]
-
-function getRangeLabel(rangeValue: string | null): string {
-  if (!rangeValue) return 'Not synced yet'
-  return DATE_RANGE_OPTIONS.find((o) => o.value === rangeValue)?.label ?? rangeValue
-}
 
 interface SyncStatus {
   success: boolean
-  synced: number
-  repos_found?: number
   message: string
-  error?: string
 }
 
 interface SyncResponse {
   last_synced: string | null
-  total_prs: number
-  last_date_range: string | null
-  auto_sync_enabled: boolean
   github_username?: string | null
 }
 
 type SyncStreamLine =
   | SyncProgressEvent
-  | { stage: 'done'; synced: number; repos_found: number; message: string }
+  | { stage: 'done'; message: string }
   | { stage: 'error'; message: string }
 
+type SyncStage = SyncProgressEvent['stage'] | 'done'
+type StepStatus = 'idle' | 'active' | 'done' | 'error'
+
+interface SyncCount {
+  done: number
+  total: number
+}
+
 interface SyncProgress {
-  percent: number
-  label: string
+  stage: SyncStage
+  details: SyncCount
+  saving: SyncCount
   log: string[]
 }
 
 const MAX_LOG_LINES = 6
+const NO_COUNT: SyncCount = { done: 0, total: 0 }
+const STAGE_ORDER: SyncStage[] = ['searching', 'details', 'saving', 'done']
 
-function describeProgress(event: SyncProgressEvent): { percent: number; label: string } {
-  // Searching ~5%, fetching PR details up to 70%, saving repos up to 100%
-  if (event.stage === 'searching') return { percent: 5, label: 'Searching GitHub for your merged PRs…' }
+const SYNC_STEPS = [
+  { icon: Search, title: 'Search GitHub', description: 'Find every merged PR you authored' },
+  { icon: GitPullRequest, title: 'Read PR details', description: 'Lines changed and commit counts' },
+  { icon: Database, title: 'Save repositories', description: 'Update your repo list and PR counts' },
+]
+
+const DOT_STYLES: Record<StepStatus, string> = {
+  idle: 'border-border bg-white text-muted-foreground',
+  active: 'border-primary bg-white text-primary',
+  done: 'border-emerald-600 bg-emerald-600 text-white',
+  error: 'border-destructive bg-destructive text-white',
+}
+
+const NOTE_STYLES: Record<StepStatus, string> = {
+  idle: '',
+  active: 'text-primary',
+  done: 'text-emerald-700',
+  error: 'text-destructive',
+}
+
+function applyProgressEvent(current: SyncProgress, event: SyncProgressEvent): SyncProgress {
+  if (event.stage === 'searching') return { ...current, stage: 'searching' }
   if (event.stage === 'details') {
-    return {
-      percent: 5 + Math.round((event.done / Math.max(event.total, 1)) * 65),
-      label: `Reading PR details… ${event.done} of ${event.total}`,
-    }
+    return { ...current, stage: 'details', details: { done: event.done, total: event.total } }
   }
   return {
-    percent: 70 + Math.round((event.done / Math.max(event.total, 1)) * 30),
-    label: `Saving repositories… ${event.done} of ${event.total}`,
+    ...current,
+    stage: 'saving',
+    saving: { done: event.done, total: event.total },
+    log: [...current.log, `${event.repo} · ${event.prs} PR${event.prs === 1 ? '' : 's'}`].slice(-MAX_LOG_LINES),
   }
+}
+
+// Searching ~5%, reading PR details up to 70%, saving repos up to 100%
+function getPercent({ stage, details, saving }: SyncProgress): number {
+  if (stage === 'done') return 100
+  if (stage === 'searching') return 5
+  if (stage === 'details') return 5 + Math.round((details.done / Math.max(details.total, 1)) * 65)
+  return 70 + Math.round((saving.done / Math.max(saving.total, 1)) * 30)
+}
+
+function getProgressLabel({ stage, details, saving }: SyncProgress): string {
+  if (stage === 'searching') return 'Searching GitHub for your merged PRs…'
+  if (stage === 'details') return `Reading PR details… ${details.done} of ${details.total}`
+  if (stage === 'saving') return `Saving repositories… ${saving.done} of ${saving.total}`
+  return ''
+}
+
+function getStepStatus(index: number, progress: SyncProgress | null, failed: boolean): StepStatus {
+  if (!progress) return 'idle'
+  const current = STAGE_ORDER.indexOf(progress.stage)
+  if (index < current) return 'done'
+  if (index > current) return 'idle'
+  return failed ? 'error' : 'active'
+}
+
+function getStepNote(index: number, status: StepStatus, progress: SyncProgress | null): string {
+  if (!progress || status === 'idle') return ''
+  if (index === 0) return status === 'done' ? `${progress.details.total} new` : ''
+  const { done, total } = index === 1 ? progress.details : progress.saving
+  if (status === 'done') return total > 0 ? `${total} ${index === 1 ? 'read' : 'saved'}` : ''
+  return `${done} / ${total}`
 }
 
 interface CachedRepo {
@@ -165,6 +204,49 @@ function RepoRow({ repo, owner, isPending, onToggle, hasMounted }: RepoRowProps)
   )
 }
 
+function SyncSteps({ progress, failed }: { progress: SyncProgress | null; failed: boolean }) {
+  return (
+    <ol aria-label="Sync steps" className="rounded-2xl border border-border bg-background/70 py-1.5">
+      {SYNC_STEPS.map((step, index) => {
+        const status = getStepStatus(index, progress, failed)
+        const previousDone = index > 0 && getStepStatus(index - 1, progress, failed) === 'done'
+        const Icon = step.icon
+
+        return (
+          <li key={step.title} className="relative grid grid-cols-[1.75rem_1fr_auto] items-center gap-3 px-4 py-2.5">
+            {index > 0 ? (
+              <span
+                aria-hidden="true"
+                className={cn('absolute -top-2 left-[29px] h-4 w-0.5', previousDone ? 'bg-emerald-600' : 'bg-border')}
+              />
+            ) : null}
+            <span className={cn('relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-[1.5px]', DOT_STYLES[status])}>
+              {status === 'active' ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary/25 border-t-primary motion-reduce:animate-none" />
+              ) : status === 'done' ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : status === 'error' ? (
+                <AlertCircle className="h-3.5 w-3.5" />
+              ) : (
+                <Icon className="h-3.5 w-3.5" />
+              )}
+            </span>
+            <div>
+              <p className={cn('text-sm leading-tight', status === 'idle' ? 'font-medium text-muted-foreground' : 'font-semibold text-foreground')}>
+                {step.title}
+              </p>
+              <p className="text-xs text-muted-foreground">{step.description}</p>
+            </div>
+            <span className={cn('font-mono text-xs tabular-nums', NOTE_STYLES[status])}>
+              {getStepNote(index, status, progress)}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 interface SetupChecklistProps {
   hasSynced: boolean
   hasShownRepo: boolean
@@ -235,12 +317,9 @@ export default function SettingsPage() {
   const [repoUpdateError, setRepoUpdateError] = useState<string | null>(null)
   const [pendingRepos, setPendingRepos] = useState<Record<string, boolean>>({})
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange>('3m')
   const [hasMounted, setHasMounted] = useState(false)
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null)
   const [repoFilter, setRepoFilter] = useState('')
-
-  const persistedRangeLabel = getRangeLabel(syncInfo?.last_date_range ?? null)
 
   const fetchSyncStatus = useCallback(async () => {
     try {
@@ -251,7 +330,6 @@ export default function SettingsPage() {
     } catch {
       setSyncStatus((current) => current ?? {
         success: false,
-        synced: 0,
         message: 'Could not load your sync status. Refresh the page to try again.',
       })
     }
@@ -368,22 +446,21 @@ export default function SettingsPage() {
   const handleSync = async () => {
     setIsSyncing(true)
     setSyncStatus(null)
-    setSyncProgress({ percent: 2, label: 'Starting sync…', log: [] })
+    setSyncProgress({ stage: 'searching', details: NO_COUNT, saving: NO_COUNT, log: [] })
     try {
       const response = await fetch('/api/sync-prs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
-        body: JSON.stringify({ dateRange }),
+        headers: { Accept: 'application/x-ndjson' },
       })
 
-      let finalLine: SyncStreamLine | null = null
+      let finalLine: Extract<SyncStreamLine, { stage: 'done' | 'error' }> | null = null
       const isStream = response.headers?.get('content-type')?.includes('application/x-ndjson') && response.body
 
       if (!response.ok || !isStream) {
         // Error responses (and non-streaming servers) answer with plain JSON
         const data = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(data.message || 'Failed to sync PRs')
-        finalLine = { stage: 'done', synced: data.synced, repos_found: data.repos_found, message: data.message }
+        finalLine = { stage: 'done', message: data.message }
       }
 
       const reader = isStream && response.body ? response.body.getReader() : null
@@ -404,40 +481,24 @@ export default function SettingsPage() {
             finalLine = event
             continue
           }
-          const { percent, label } = describeProgress(event)
-          setSyncProgress((current) => ({
-            percent,
-            label,
-            log: event.stage === 'saving'
-              ? [...(current?.log ?? []), `${event.repo} · ${event.prs} PR${event.prs === 1 ? '' : 's'}`].slice(-MAX_LOG_LINES)
-              : current?.log ?? [],
-          }))
+          setSyncProgress((current) => (current ? applyProgressEvent(current, event) : current))
         }
       }
 
       if (!finalLine || finalLine.stage === 'error') {
-        throw new Error(finalLine && 'message' in finalLine ? finalLine.message : 'Sync stopped before it finished')
+        throw new Error(finalLine?.message ?? 'Sync stopped before it finished')
       }
 
-      if (finalLine.stage === 'done') {
-        setSyncStatus({
-          success: true,
-          synced: finalLine.synced,
-          repos_found: finalLine.repos_found,
-          message: finalLine.message,
-        })
-      }
+      setSyncProgress((current) => (current ? { ...current, stage: 'done' } : current))
+      setSyncStatus({ success: true, message: finalLine.message })
       await Promise.all([fetchSyncStatus(), fetchRepos()])
     } catch (error) {
       setSyncStatus({
         success: false,
-        synced: 0,
         message: error instanceof Error ? error.message : 'Network error',
-        error: 'Sync failed',
       })
     } finally {
       setIsSyncing(false)
-      setSyncProgress(null)
     }
   }
 
@@ -445,13 +506,6 @@ export default function SettingsPage() {
     setHasMounted(true)
     Promise.allSettled([fetchRepos(), fetchSyncStatus()])
   }, [fetchRepos, fetchSyncStatus])
-
-  // Restore persisted date range
-  useEffect(() => {
-    if (syncInfo?.last_date_range) {
-      setDateRange(syncInfo.last_date_range as DateRange)
-    }
-  }, [syncInfo])
 
   const repoStats = useMemo(() => {
     const totalRepos = repos.length
@@ -474,6 +528,9 @@ export default function SettingsPage() {
 
   const allReposEnabled = repoStats.totalRepos > 0 && repoStats.activeCount === repoStats.totalRepos
   const enabledReposLabel = `${repoStats.activeCount} of ${repoStats.totalRepos} enabled`
+
+  const syncFailed = syncProgress !== null && syncStatus?.success === false
+  const syncPercent = syncProgress ? getPercent(syncProgress) : 0
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(235,71,153,0.12),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.88))]">
@@ -499,13 +556,13 @@ export default function SettingsPage() {
                   </p>
                   <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">Settings</h1>
                   <p className="mt-2 max-w-2xl text-muted-foreground">
-                    Keep your public portfolio fresh, choose the PR window you want to sync, and decide which repositories deserve a spotlight.
+                    Keep your public portfolio fresh and decide which repositories deserve a spotlight.
                   </p>
                 </div>
                 <GitHubMark />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">Visible PRs</p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">{repoStats.publicPRs}</p>
@@ -519,10 +576,6 @@ export default function SettingsPage() {
                   <p className="mt-2 text-2xl font-semibold text-foreground">{repoStats.activeCount}</p>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Synced range</p>
-                  <p className="mt-2 text-lg font-semibold text-foreground">{persistedRangeLabel}</p>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-xs font-medium text-muted-foreground">Last synced</p>
                   <p className="mt-2 text-sm font-medium text-foreground">{hasMounted ? formatDate(syncInfo?.last_synced ?? null) : '—'}</p>
                 </div>
@@ -531,107 +584,87 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="overflow-visible border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Sync your data</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your lifetime PRs sync automatically every day. You can also sync a specific time frame by picking a range below and clicking Sync PRs.
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="relative block min-w-[220px]">
-                <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <select
-                  aria-label="Date range"
-                  className="w-full appearance-none rounded-2xl border border-border bg-background py-3 pl-10 pr-10 text-sm font-medium shadow-sm outline-none transition-colors hover:bg-muted/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  value={dateRange}
-                  onChange={(event) => setDateRange(event.target.value as DateRange)}
-                >
-                  {DATE_RANGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <Button
-                onClick={handleSync}
-                disabled={isSyncing}
-                className="min-w-[160px] rounded-2xl gap-2 px-5 py-6 text-base"
-              >
-                {isSyncing ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Syncing…
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4" />
-                    Sync PRs
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {syncProgress && (
-              <div className="mt-5 grid gap-3" role="status" aria-live="polite">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium text-foreground">{syncProgress.label}</span>
-                  <span className="font-mono text-xs text-muted-foreground">{syncProgress.percent}%</span>
-                </div>
-                <progress
-                  className="h-2 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-value]:bg-primary"
-                  max={100}
-                  value={syncProgress.percent}
-                  aria-label="Sync progress"
-                />
-                {syncProgress.log.length > 0 ? (
-                  <ul className="rounded-xl border border-border bg-muted/30 px-4 py-3 font-mono text-xs leading-6 text-muted-foreground">
-                    {syncProgress.log.map((line) => (
-                      <li key={line}><span className="text-emerald-600">✓</span> {line}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            )}
-
-            {syncStatus && (
-              <div className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-sm ${
-                syncStatus.success
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-destructive/30 bg-destructive/10 text-destructive'
-              }`}>
-                {syncStatus.success ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                ) : (
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                )}
+            <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] md:items-start">
+              <div className="grid content-start gap-4">
                 <div>
-                  <p className="font-medium">{syncStatus.message}</p>
-                  {syncStatus.success && syncStatus.repos_found !== undefined && (
-                    <p className="mt-1 text-xs opacity-80">
-                      Found {syncStatus.repos_found} repositories with merged PRs in this range.
-                    </p>
-                  )}
-                  {syncStatus.success && syncInfo?.github_username ? (
-                    <Link href={`/${syncInfo.github_username}`} className="mt-2 inline-block text-xs font-semibold underline">
-                      View your profile
-                    </Link>
-                  ) : null}
+                  <h2 className="text-xl font-semibold text-foreground">Sync your data</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Your whole merged-PR history, from your first PR to today. Runs on its own every day.
+                  </p>
                 </div>
-              </div>
-            )}
 
-            <div className="mt-5 rounded-2xl border border-border bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">What happens during sync</p>
-              <ol className="mt-2 space-y-1.5">
-                <li>1. Search GitHub for PRs you authored that were merged.</li>
-                <li>2. Refresh repository cache entries and update per-repo PR counts.</li>
-                <li>3. Use the toggles below to decide what appears on your public profile.</li>
-              </ol>
+                <Button
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  aria-busy={isSyncing}
+                  className="relative w-full gap-2 overflow-hidden rounded-2xl px-5 py-6 text-base disabled:bg-primary/90 disabled:opacity-100"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                      Syncing
+                      <span className="font-mono text-sm tabular-nums opacity-80">{syncPercent}%</span>
+                      <progress
+                        aria-hidden="true"
+                        className="absolute inset-x-0 bottom-0 h-[3px] w-full appearance-none [&::-moz-progress-bar]:bg-white/80 [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-white/80"
+                        max={100}
+                        value={syncPercent}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      {syncFailed ? 'Try again' : 'Sync lifetime history'}
+                    </>
+                  )}
+                </Button>
+
+                <p className="min-h-5 text-sm text-muted-foreground">
+                  {syncInfo?.last_synced ? (
+                    <>
+                      Last synced <span className="font-medium text-foreground">{formatDate(syncInfo.last_synced)}</span>
+                      {` · ${repoStats.totalCachedPRs} PRs · ${repoStats.totalRepos} repos`}
+                    </>
+                  ) : syncInfo ? (
+                    'Not synced yet'
+                  ) : null}
+                </p>
+
+                {syncStatus && (
+                  <div className={`flex items-start gap-3 rounded-2xl border px-4 py-4 text-sm ${
+                    syncStatus.success
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                      : 'border-destructive/30 bg-destructive/10 text-destructive'
+                  }`}>
+                    {syncStatus.success ? (
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    ) : (
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-medium">{syncStatus.message}</p>
+                      {syncStatus.success && syncInfo?.github_username ? (
+                        <Link href={`/${syncInfo.github_username}`} className="mt-2 inline-block text-xs font-semibold underline">
+                          View your profile
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <SyncSteps progress={syncProgress} failed={syncFailed} />
             </div>
+
+            <p className="sr-only" role="status">{isSyncing && syncProgress ? getProgressLabel(syncProgress) : ''}</p>
+
+            {isSyncing && syncProgress && syncProgress.log.length > 0 ? (
+              <ul className="mt-5 rounded-xl border border-border bg-muted/30 px-4 py-3 font-mono text-xs leading-6 text-muted-foreground">
+                {syncProgress.log.map((line) => (
+                  <li key={line}><span className="text-emerald-600">✓</span> {line}</li>
+                ))}
+              </ul>
+            ) : null}
           </Card>
 
           <Card id="repositories" className="scroll-mt-20 border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">

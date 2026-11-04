@@ -21,6 +21,8 @@ const CHANGELOG: ChangelogEntry[] = [
   {
     date: 'November 5, 2026',
     items: [
+      'Syncing in Settings is now one button that brings in your whole PR history. The date range picker is gone, and a step-by-step tracker shows what the sync is doing, with live counts',
+      'A sync now only reads PRs it has not saved yet, so repeat syncs finish much faster',
       'Pages load much faster: the app now runs next to its database in Singapore, and clicking a link shows a loading screen right away instead of freezing',
       'Profile pages with many pull requests load much faster, and the About and Changelog pages now open instantly',
       'The profile activity grid now fills the full width and shows a tooltip on hover with the PR count and titles for that day',

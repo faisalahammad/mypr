@@ -26,12 +26,12 @@ describe('Sync API Response Schemas', () => {
         success: true,
         synced: 0,
         repos_found: 0,
-        message: 'No merged pull requests found for the selected time range.'
+        message: 'You are up to date. No new merged pull requests found.'
       }
 
       expect(response.synced).toBe(0)
       expect(response.repos_found).toBe(0)
-      expect(response.message).toContain('merged pull requests')
+      expect(response.message).toContain('No new merged pull requests')
     })
   })
 

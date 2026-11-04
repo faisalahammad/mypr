@@ -104,12 +104,6 @@ describe('Auto-Sync Cron Job', () => {
       expect(results).toHaveLength(1) // only carol
       expect(results[0].github_username).toBe('carol')
     })
-
-    it('should always sync with the lifetime date range', () => {
-      // The cron passes 'lifetime' explicitly, ignoring any saved range
-      const cronDateRange = 'lifetime'
-      expect(cronDateRange).toBe('lifetime')
-    })
   })
 
   // ──────────────────────────────────────────────

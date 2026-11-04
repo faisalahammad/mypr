@@ -23,16 +23,6 @@ export interface GitHubRepo {
   pr_count?: number
 }
 
-export type DateRange = '1m' | '3m' | '6m' | '12m' | '24m' | 'lifetime'
-
-export const getDateRangeStart = (range: DateRange): string | null => {
-  if (range === 'lifetime') return null
-  const months = { '1m': 1, '3m': 3, '6m': 6, '12m': 12, '24m': 24 }[range]
-  const date = new Date()
-  date.setMonth(date.getMonth() - months)
-  return date.toISOString().split('T')[0] // YYYY-MM-DD format
-}
-
 // Represents a PR returned from GitHub's search API
 export interface GitHubSearchPR {
   number: number
@@ -225,18 +215,13 @@ export type SyncProgressHandler = (event: SyncProgressEvent) => void
 export const searchMergedPRs = async (
   accessToken: string,
   username: string,
-  dateRange: DateRange,
   skipPRs: ReadonlySet<string> = new Set(),
   onProgress?: SyncProgressHandler
 ): Promise<RepoWithPRs[]> => {
   const octokit = createOctokit(accessToken)
-  const dateStart = getDateRangeStart(dateRange)
 
-  // Build query: authored by user and merged.
-  let query = `type:pr author:${username} is:merged`
-  if (dateStart) {
-    query += ` merged:>=${dateStart}`
-  }
+  // Every PR the user authored and merged, no date window
+  const query = `type:pr author:${username} is:merged`
 
   onProgress?.({ stage: 'searching' })
 

@@ -1,12 +1,12 @@
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
 import { syncUserPRs, type SyncResult } from '@/lib/sync-user'
-import type { DateRange, SyncProgressEvent } from '@/lib/github'
+import type { SyncProgressEvent } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
 
 function getSyncMessage(result: SyncResult): string {
   return result.synced === 0
-    ? 'No merged pull requests found for the selected time range.'
-    : `Synced ${result.synced} merged PR${result.synced !== 1 ? 's' : ''} across ${result.repos_found} repo${result.repos_found !== 1 ? 's' : ''}`
+    ? 'You are up to date. No new merged pull requests found.'
+    : `Synced ${result.synced} new merged PR${result.synced !== 1 ? 's' : ''} across ${result.repos_found} repo${result.repos_found !== 1 ? 's' : ''}`
 }
 
 export async function POST(request: NextRequest) {
@@ -50,17 +50,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get date range from request body (default to 3 months if not provided)
-    let dateRange: DateRange = '3m'
-    try {
-      const body = await request.json()
-      if (body?.dateRange) {
-        dateRange = body.dateRange as DateRange
-      }
-    } catch {
-      // No body / invalid JSON - use default
-    }
-
     const syncProfile = {
       id: session.user.id,
       github_username: typedProfile.github_username,
@@ -76,7 +65,7 @@ export async function POST(request: NextRequest) {
           const send = (payload: SyncProgressEvent | Record<string, unknown>) =>
             controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`))
 
-          const result = await syncUserPRs(syncProfile, dateRange, {
+          const result = await syncUserPRs(syncProfile, {
             onProgress: (event) => send(event),
           })
 
@@ -104,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delegate to shared sync logic
-    const result = await syncUserPRs(syncProfile, dateRange)
+    const result = await syncUserPRs(syncProfile)
 
     if (result.error) {
       return NextResponse.json(
@@ -170,12 +159,11 @@ export async function GET(request: NextRequest) {
 
     const { data: syncMeta } = await supabase
       .from('sync_metadata')
-      .select('last_date_range, auto_sync_enabled, updated_at')
+      .select('auto_sync_enabled, updated_at')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
     const typedMeta = syncMeta as {
-      last_date_range: string | null
       auto_sync_enabled: boolean
       updated_at: string | null
     } | null
@@ -190,7 +178,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       last_synced: lastSynced,
       total_prs: count || 0,
-      last_date_range: typedMeta?.last_date_range ?? null,
       auto_sync_enabled: typedMeta?.auto_sync_enabled ?? true,
       github_username: (ownProfile as { github_username: string } | null)?.github_username ?? null,
     })

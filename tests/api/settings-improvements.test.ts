@@ -2,13 +2,11 @@
  * Tests for settings page improvements:
  * - Sync metadata schema (auto_sync_enabled field)
  * - GET /api/sync-prs response includes auto_sync_enabled
- * - Date range persistence logic
  * - formatDate hydration safety
  * - RepoCard props & new repos default to inactive
  */
 
 import type { Database } from '@/lib/supabase'
-import type { DateRange } from '@/lib/github'
 
 type SyncMetadataRow = Database['public']['Tables']['sync_metadata']['Row']
 type SyncMetadataInsert = Database['public']['Tables']['sync_metadata']['Insert']
@@ -23,7 +21,6 @@ describe('Settings Page Improvements', () => {
     it('Row type should include auto_sync_enabled as boolean', () => {
       const row: SyncMetadataRow = {
         user_id: 'user-123',
-        last_date_range: '12m',
         auto_sync_enabled: true,
         updated_at: new Date().toISOString(),
       }
@@ -61,7 +58,6 @@ describe('Settings Page Improvements', () => {
       const response = {
         last_synced: '2024-06-01T12:00:00Z',
         total_prs: 42,
-        last_date_range: '12m',
         auto_sync_enabled: false,
       }
 
@@ -78,56 +74,10 @@ describe('Settings Page Improvements', () => {
     })
 
     it('should preserve auto_sync_enabled=true when set', () => {
-      const typedMeta = { last_date_range: '6m', auto_sync_enabled: true }
+      const typedMeta = { auto_sync_enabled: true }
       const auto_sync_enabled = typedMeta?.auto_sync_enabled ?? true
 
       expect(auto_sync_enabled).toBe(true)
-    })
-  })
-
-  // ──────────────────────────────────────────────
-  // 4. Date range persistence & restoration
-  // ──────────────────────────────────────────────
-  describe('Date range persistence', () => {
-    const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
-      { value: '1m', label: 'Last 1 month' },
-      { value: '3m', label: 'Last 3 months' },
-      { value: '6m', label: 'Last 6 months' },
-      { value: '12m', label: 'Last 12 months' },
-      { value: '24m', label: 'Last 24 months' },
-      { value: 'lifetime', label: 'Lifetime' },
-    ]
-
-    it('should restore dateRange from syncInfo.last_date_range', () => {
-      const syncInfo = { last_date_range: '12m' }
-      let dateRange: DateRange = '3m' // default
-
-      if (syncInfo.last_date_range) {
-        dateRange = syncInfo.last_date_range as DateRange
-      }
-
-      expect(dateRange).toBe('12m')
-    })
-
-    it('should keep default when last_date_range is null', () => {
-      const syncInfo = { last_date_range: null }
-      let dateRange: DateRange = '3m'
-
-      if (syncInfo.last_date_range) {
-        dateRange = syncInfo.last_date_range as DateRange
-      }
-
-      expect(dateRange).toBe('3m')
-    })
-
-    it('all date range values should have a matching label', () => {
-      const validValues: DateRange[] = ['1m', '3m', '6m', '12m', '24m', 'lifetime']
-
-      for (const value of validValues) {
-        const option = DATE_RANGE_OPTIONS.find((o) => o.value === value)
-        expect(option).toBeDefined()
-        expect(option!.label).toBeTruthy()
-      }
     })
   })
 

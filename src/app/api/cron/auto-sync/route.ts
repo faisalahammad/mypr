@@ -20,9 +20,8 @@ interface AutoSyncProfile {
  *
  * Vercel Cron Job handler — runs daily at 00:00 UTC (06:00 Bangladesh time)
  * via vercel.json schedule. Auto-sync is forced on for every registered user:
- * all profiles with a GitHub token are synced with the "lifetime" date range,
- * fetching only PRs that aren't cached yet. Their manually chosen date range
- * in sync_metadata is preserved (persistDateRange: false).
+ * all profiles with a GitHub token get their whole PR history synced,
+ * fetching only PRs that aren't cached yet.
  *
  * Security: Protected by CRON_SECRET header validation.
  * Vercel automatically sends this header for cron-triggered requests.
@@ -79,17 +78,13 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      console.log(`[auto-sync cron] Syncing user: ${user.github_username} (range: lifetime)`)
+      console.log(`[auto-sync cron] Syncing user: ${user.github_username}`)
 
-      const result = await syncUserPRs(
-        {
-          id: user.id,
-          github_username: user.github_username,
-          github_access_token: user.github_access_token,
-        },
-        'lifetime',
-        { persistDateRange: false, skipCachedPRs: true }
-      )
+      const result = await syncUserPRs({
+        id: user.id,
+        github_username: user.github_username,
+        github_access_token: user.github_access_token,
+      })
 
       console.log(
         `[auto-sync cron] Completed: ${user.github_username} — ${result.synced} PRs, ${result.repos_found} repos`
