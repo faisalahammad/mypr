@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { ExternalLink, Settings } from 'lucide-react'
 import { FollowButton } from '@/components/FollowButton'
+import { ActivityGrid } from '@/components/profile/ActivityGrid'
 import type { ProfileResultsModel } from '@/lib/profile-results'
-import { cn } from '@/lib/utils'
 
 interface ProfileHeaderProps {
   model: ProfileResultsModel
@@ -10,7 +10,6 @@ interface ProfileHeaderProps {
   viewer: { id: string; isOwner: boolean; isFollowing: boolean } | null
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000
 const MAX_REPO_CHIPS = 4
 
 const compactNumber = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
@@ -21,59 +20,6 @@ function formatSynced(iso: string | null): string | null {
   const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
   if (Math.abs(diffHours) < 24) return rtf.format(diffHours, 'hour')
   return rtf.format(Math.round(diffHours / 24), 'day')
-}
-
-function levelClass(count: number): string {
-  if (count === 0) return 'bg-muted'
-  if (count === 1) return 'bg-primary/30'
-  if (count <= 3) return 'bg-primary/60'
-  return 'bg-primary'
-}
-
-/** GitHub-style grid: 53 week columns x 7 weekday rows, ending today (UTC). */
-export function ActivityGrid({ activity }: { activity: Record<string, number> }) {
-  const today = new Date()
-  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  // Start on the Sunday 52 weeks before this week's Sunday
-  const start = todayUtc - (today.getUTCDay() + 52 * 7) * DAY_MS
-  const days: Array<{ key: string; count: number; future: boolean }> = []
-
-  for (let time = start; time < start + 53 * 7 * DAY_MS; time += DAY_MS) {
-    const key = new Date(time).toISOString().slice(0, 10)
-    days.push({ key, count: activity[key] ?? 0, future: time > todayUtc })
-  }
-
-  const total = days.reduce((sum, day) => sum + day.count, 0)
-
-  return (
-    <div className="grid gap-2">
-      <div className="overflow-x-auto pb-1">
-        <div
-          className="grid w-max grid-flow-col grid-rows-7 gap-[3px]"
-          role="img"
-          aria-label={`${total} merged pull requests in the last year`}
-        >
-          {days.map((day) => (
-            <span
-              key={day.key}
-              title={day.future ? undefined : `${day.count} PR${day.count === 1 ? '' : 's'} on ${day.key}`}
-              className={cn('h-[11px] w-[11px] rounded-[2px]', day.future ? 'bg-transparent' : levelClass(day.count))}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>{total} merged PR{total === 1 ? '' : 's'} in the last year</span>
-        <span className="flex items-center gap-1" aria-hidden="true">
-          Less
-          {[0, 1, 2, 4].map((count) => (
-            <span key={count} className={cn('h-[11px] w-[11px] rounded-[2px]', levelClass(count))} />
-          ))}
-          More
-        </span>
-      </div>
-    </div>
-  )
 }
 
 export function ProfileHeader({ model, profileId, viewer }: ProfileHeaderProps) {

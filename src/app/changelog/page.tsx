@@ -25,6 +25,14 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: 'November 5, 2026',
+    items: [
+      'The profile activity grid now fills the full width and shows a tooltip on hover with the PR count and titles for that day',
+      'New activity stats above the grid: PRs in the last year, active days, longest streak, and your busiest day',
+      'The profile timeline now opens on your latest month. Pick a year and a month from the bar chart to see that month\'s PRs, and copy all of its PR links in one click',
+    ],
+  },
+  {
     date: 'November 4, 2026',
     items: [
       'New Explore page: search developers by GitHub username and browse who merged PRs recently',

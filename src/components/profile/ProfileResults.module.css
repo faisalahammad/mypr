@@ -297,13 +297,6 @@
   font-family: var(--font-jetbrains-mono), monospace;
 }
 
-.repoListMeta {
-  margin-top: 4px;
-  color: var(--text2);
-  font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 0.74rem;
-}
-
 .repoExpandButton {
   display: inline-flex;
   align-items: center;
@@ -436,6 +429,125 @@
 .timeline {
   display: grid;
   gap: 28px;
+}
+
+.timelineYears {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timelineYear {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: white;
+  color: var(--text2);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.timelineYear:hover {
+  border-color: rgb(137 87 229 / 0.45);
+  color: var(--text);
+}
+
+.timelineYearActive {
+  background: var(--text);
+  border-color: var(--text);
+  color: white;
+}
+
+.timelineYearActive:hover {
+  color: white;
+}
+
+.timelineBars {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  height: 140px;
+}
+
+.timelineBar {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.timelineBar:disabled {
+  cursor: default;
+}
+
+.timelineBar:focus-visible {
+  outline: 2px solid var(--merged);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.timelineBarChart {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px 6px 2px 2px;
+}
+
+.timelineBarFill {
+  fill: rgb(137 87 229 / 0.4);
+  transition: fill 0.15s ease;
+}
+
+.timelineBar:hover:not(:disabled) .timelineBarFill {
+  fill: rgb(137 87 229 / 0.65);
+}
+
+.timelineBarActive .timelineBarFill,
+.timelineBarActive:hover .timelineBarFill {
+  fill: var(--merged);
+}
+
+.timelineBar:disabled .timelineBarFill {
+  fill: var(--border2);
+}
+
+.timelineBarCount {
+  min-height: 1em;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.timelineBarLabel {
+  color: var(--text3);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 640px) {
+  .timelineBars {
+    gap: 3px;
+    height: 110px;
+  }
+
+  .timelineBarCount,
+  .timelineBarLabel {
+    font-size: 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timelineBarFill {
+    transition: none;
+  }
 }
 
 .timelineMonthGroup {

@@ -2,6 +2,11 @@ import type { PullRequestWithProfile } from '@/types'
 
 export type ProfileResultsView = 'repos' | 'summary' | 'timeline'
 
+export interface ActivityDayPR {
+  number: number
+  title: string
+}
+
 export interface ProfileResultsModel {
   identity: {
     avatarUrl: string | null
@@ -17,7 +22,7 @@ export interface ProfileResultsModel {
     lastSyncedAt: string | null
   }
   /** Merged PRs per UTC day (YYYY-MM-DD) over the last 366 days */
-  activity: Record<string, number>
+  activity: Record<string, ActivityDayPR[]>
   repoGrid: Array<{
     fullName: string
     name: string
@@ -232,7 +237,7 @@ export function buildProfileResultsModel({
   const timelineByMonth = Array.from(monthGroups.values())
 
   const activityStart = Date.now() - 366 * 24 * 60 * 60 * 1000
-  const activity: Record<string, number> = {}
+  const activity: Record<string, ActivityDayPR[]> = {}
   let linesAdded = 0
   let lastSyncedAt: string | null = null
   for (const pr of prs) {
@@ -240,7 +245,8 @@ export function buildProfileResultsModel({
     if (pr.synced_at && (!lastSyncedAt || pr.synced_at > lastSyncedAt)) lastSyncedAt = pr.synced_at
     if (Date.parse(pr.merged_at) >= activityStart) {
       const day = pr.merged_at.slice(0, 10)
-      activity[day] = (activity[day] ?? 0) + 1
+      activity[day] ??= []
+      activity[day].push({ number: pr.pr_number, title: pr.title })
     }
   }
 

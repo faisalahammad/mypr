@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -26,6 +26,8 @@ function formatTimelineDate(dateString: string): string {
   })
 }
 
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 function getCaptureFilename(username: string, view: ProfileResultsView): string {
   const slug = view === 'summary' ? 'summary-stats' : view === 'timeline' ? 'timeline' : 'repo-grid'
   return `${username}-${slug}.png`
@@ -38,6 +40,30 @@ export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) 
   const [copyToastVisible, setCopyToastVisible] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [expandedRepos, setExpandedRepos] = useState<Record<string, boolean>>({})
+  const [selectedMonthKey, setSelectedMonthKey] = useState(model.timelineByMonth[0]?.key ?? '')
+
+  const { monthsByKey, yearTotals } = useMemo(() => {
+    const totals = new Map<string, number>()
+    for (const month of model.timelineByMonth) {
+      const year = month.key.slice(0, 4)
+      totals.set(year, (totals.get(year) ?? 0) + month.entries.length)
+    }
+    return { monthsByKey: new Map(model.timelineByMonth.map((month) => [month.key, month])), yearTotals: totals }
+  }, [model.timelineByMonth])
+
+  const selectedYear = selectedMonthKey.slice(0, 4)
+  const selectedMonth = monthsByKey.get(selectedMonthKey)
+  const yearMonths = MONTH_SHORT.map((short, index) => {
+    const key = `${selectedYear}-${String(index + 1).padStart(2, '0')}`
+    return { key, short, count: monthsByKey.get(key)?.entries.length ?? 0 }
+  })
+  const yearMax = Math.max(1, ...yearMonths.map((month) => month.count))
+
+  const selectYear = (year: string) => {
+    // timelineByMonth is newest first, so this picks the latest month of that year
+    const latest = model.timelineByMonth.find((month) => month.key.startsWith(year))
+    if (latest) setSelectedMonthKey(latest.key)
+  }
 
   const handleScreenshot = async () => {
     if (!previewCardRef.current) return
@@ -298,47 +324,82 @@ export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) 
               </div>
             )}
 
-            {activeView === 'timeline' && (
+            {activeView === 'timeline' && selectedMonth && (
               <div className={styles.timeline}>
-                {model.timelineByMonth.map((month) => (
-                  <div key={month.key} className={styles.timelineMonthGroup}>
-                    <div className={styles.timelineMonthHeader}>
-                      <span className={styles.timelineMonthLabel}>
-                        {month.label} ({month.entries.length})
-                      </span>
-                      <button
-                        type="button"
-                        className={styles.timelineMonthCopyButton}
-                        onClick={() => handleCopyUrls(month.entries.map((entry) => entry.url))}
-                        aria-label={`Copy PR URLs for ${month.label}`}
-                        title="Copy PR URLs"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                        </svg>
-                      </button>
-                    </div>
+                <div className={styles.timelineYears} role="group" aria-label="Year">
+                  {Array.from(yearTotals, ([year, total]) => (
+                    <button
+                      key={year}
+                      type="button"
+                      aria-pressed={year === selectedYear}
+                      className={`${styles.timelineYear} ${year === selectedYear ? styles.timelineYearActive : ''}`}
+                      onClick={() => selectYear(year)}
+                    >
+                      {year} · {total}
+                    </button>
+                  ))}
+                </div>
 
-                    <div className={styles.timelineMonthBody}>
-                      <div className={styles.timelineSpine} data-testid="profile-timeline-spine" aria-hidden="true" />
-                      {month.entries.map((entry) => (
-                        <div key={entry.id} className={styles.timelineItem} data-testid="profile-timeline-item">
-                          <div className={styles.timelineRail} aria-hidden="true">
-                            <span className={styles.timelineMarker} data-testid="profile-timeline-marker" />
-                          </div>
-                          <a href={entry.url} target="_blank" rel="noreferrer" className={styles.timelineCard}>
-                            <div className={styles.timelineRepo}>{entry.repoFullName}</div>
-                            <div className={styles.timelineTitle}>{entry.title}</div>
-                            <div className={styles.timelineMeta}>
-                              PR #{entry.number} · {formatTimelineDate(entry.mergedAt)}
-                            </div>
-                          </a>
-                        </div>
-                      ))}
-                    </div>
+                <div className={styles.timelineBars} role="group" aria-label={`Months in ${selectedYear}`}>
+                  {yearMonths.map((month) => {
+                    const height = month.count === 0 ? 3 : Math.max(6, (month.count / yearMax) * 100)
+                    return (
+                      <button
+                        key={month.key}
+                        type="button"
+                        aria-pressed={month.key === selectedMonthKey}
+                        aria-label={`${month.short} ${selectedYear}: ${month.count} PR${month.count === 1 ? '' : 's'}`}
+                        disabled={month.count === 0}
+                        className={`${styles.timelineBar} ${month.key === selectedMonthKey ? styles.timelineBarActive : ''}`}
+                        onClick={() => setSelectedMonthKey(month.key)}
+                      >
+                        <svg className={styles.timelineBarChart} viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true">
+                          <rect x="0" y={100 - height} width="10" height={height} className={styles.timelineBarFill} />
+                        </svg>
+                        <span className={styles.timelineBarCount}>{month.count || ''}</span>
+                        <span className={styles.timelineBarLabel}>{month.short}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className={styles.timelineMonthGroup}>
+                  <div className={styles.timelineMonthHeader}>
+                    <span className={styles.timelineMonthLabel}>
+                      {selectedMonth.label} ({selectedMonth.entries.length})
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.timelineMonthCopyButton}
+                      onClick={() => handleCopyUrls(selectedMonth.entries.map((entry) => entry.url))}
+                      aria-label={`Copy PR URLs for ${selectedMonth.label}`}
+                      title="Copy PR URLs"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    </button>
                   </div>
-                ))}
+
+                  <div className={styles.timelineMonthBody}>
+                    <div className={styles.timelineSpine} data-testid="profile-timeline-spine" aria-hidden="true" />
+                    {selectedMonth.entries.map((entry) => (
+                      <div key={entry.id} className={styles.timelineItem} data-testid="profile-timeline-item">
+                        <div className={styles.timelineRail} aria-hidden="true">
+                          <span className={styles.timelineMarker} data-testid="profile-timeline-marker" />
+                        </div>
+                        <a href={entry.url} target="_blank" rel="noreferrer" className={styles.timelineCard}>
+                          <div className={styles.timelineRepo}>{entry.repoFullName}</div>
+                          <div className={styles.timelineTitle}>{entry.title}</div>
+                          <div className={styles.timelineMeta}>
+                            PR #{entry.number} · {formatTimelineDate(entry.mergedAt)}
+                          </div>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>

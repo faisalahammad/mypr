@@ -105,6 +105,20 @@ const model: ProfileResultsModel = {
         },
       ],
     },
+    {
+      key: '2025-03',
+      label: 'March 2025',
+      entries: [
+        {
+          id: 'pr-7',
+          title: 'Fix sidebar spacing',
+          number: 7,
+          repoFullName: 'vercel/next.js',
+          url: 'https://github.com/vercel/next.js/pull/7',
+          mergedAt: '2025-03-02T10:00:00.000Z',
+        },
+      ],
+    },
   ],
   shareVariants: [
     'A lot of my recent work shipped through open source: 4 merged PRs across 2 repos. See the work: mypr.pro.bd/faisalahammad',
@@ -229,9 +243,31 @@ describe('ProfileResults', () => {
     const spine = container.querySelector('[data-testid="profile-timeline-spine"]')
     const markers = container.querySelectorAll('[data-testid="profile-timeline-marker"]')
 
-    expect(items).toHaveLength(model.timeline.length)
+    // Only the newest month is drawn on first load
+    expect(items).toHaveLength(model.timelineByMonth[0].entries.length)
     expect(spine).toBeInTheDocument()
-    expect(markers).toHaveLength(model.timeline.length)
+    expect(markers).toHaveLength(model.timelineByMonth[0].entries.length)
+  })
+
+  it('switches the timeline by year and month, and copies the chosen month', async () => {
+    render(<ProfileResults model={model} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
+
+    expect(screen.getByRole('button', { name: '2026 · 2' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Apr 2026: 2 PRs' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'May 2026: 0 PRs' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '2025 · 1' }))
+
+    expect(screen.getByText('March 2025 (1)')).toBeInTheDocument()
+    expect(screen.queryByText('Polish route transitions')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /copy pr urls for march 2025/i }))
+
+    await waitFor(() => {
+      expect(mockWriteText).toHaveBeenCalledWith('https://github.com/vercel/next.js/pull/7')
+    })
   })
 
   it('uses more meaningful preview labels across the three result tabs', () => {
