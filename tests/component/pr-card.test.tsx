@@ -6,12 +6,6 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { PRCard } from '@/components/pr-card/PRCard'
 
-// Mock html2canvas (used by downloadAsImage)
-jest.mock('html2canvas', () => ({
-  __esModule: true,
-  default: jest.fn(() => Promise.resolve({ toDataURL: () => 'data:image/png;base64,abc' }))
-}))
-
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
   ExternalLink: () => <span data-testid="external-link-icon">↗</span>,

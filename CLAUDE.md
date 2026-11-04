@@ -13,7 +13,7 @@ mypr.pro.bd is a developer portfolio tool that lets engineers showcase their mer
 | Auth + DB | Supabase | latest |
 | Styling | Tailwind CSS + shadcn/ui + Lucide React | latest |
 | GitHub API | Octokit | latest |
-| Screenshot | html2canvas | latest |
+| Screenshot | html-to-image | latest |
 | Hosting | Vercel | — |
 
 ## Folder Structure
@@ -122,7 +122,7 @@ NEXT_PUBLIC_APP_URL=https://mypr.pro.bd
 | shadcn/ui | Unstyled primitives with Tailwind, full ownership of component code |
 | PR summary from GitHub body | No AI dependency, keeps costs zero, respects the author's own description |
 | No AI integration | Keeps the app fast, cheap, and deterministic |
-| html2canvas for screenshots | Client-side only, no server cost, works without a headless browser |
+| html-to-image for screenshots | Client-side only, no server cost, works without a headless browser |
 | App Router (Next.js 14) | Server components reduce JS bundle, better for SEO on public profile pages |
 
 ## Do Not Do
