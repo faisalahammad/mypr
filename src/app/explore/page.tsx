@@ -93,7 +93,6 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                       alt=""
                       width={40}
                       height={40}
-                      loading="lazy"
                       className="h-10 w-10 shrink-0 rounded-full object-cover"
                     />
                   ) : (
