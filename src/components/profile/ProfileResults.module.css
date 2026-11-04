@@ -51,46 +51,10 @@
   margin-bottom: 2rem;
 }
 
-.userInfo {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.userAvatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  border: 2px solid var(--border);
-  object-fit: cover;
-  background: var(--surface2);
-}
 
-.userAvatarFallback {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  border: 2px solid var(--border);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--merged), var(--accent));
-  color: white;
-  font-weight: 800;
-}
 
-.userName {
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-}
 
-.userMeta {
-  font-size: 0.85rem;
-  color: var(--text2);
-  margin-top: 3px;
-  font-family: var(--font-jetbrains-mono), monospace;
-}
 
 .resultsActions {
   display: flex;

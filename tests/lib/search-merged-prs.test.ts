@@ -57,4 +57,15 @@ describe('searchMergedPRs', () => {
     expect(repos[0].prs.map((pr) => pr.pr_number)).toEqual([2])
     expect(detailCalls()).toHaveLength(1)
   })
+
+  it('reports search and detail progress', async () => {
+    const events: unknown[] = []
+
+    await searchMergedPRs('token', 'octocat', 'lifetime', new Set(), (event) => events.push(event))
+
+    expect(events).toEqual([
+      { stage: 'searching' },
+      { stage: 'details', done: 3, total: 3 },
+    ])
+  })
 })

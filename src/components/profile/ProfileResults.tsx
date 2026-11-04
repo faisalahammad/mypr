@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Link from 'next/link'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 import { downloadAsImage } from '@/lib/utils'
@@ -13,6 +14,8 @@ import styles from './ProfileResults.module.css'
 
 interface ProfileResultsProps {
   model: ProfileResultsModel
+  /** The signed-in viewer owns this profile */
+  isOwner?: boolean
 }
 
 function formatTimelineDate(dateString: string): string {
@@ -28,7 +31,7 @@ function getCaptureFilename(username: string, view: ProfileResultsView): string 
   return `${username}-${slug}.png`
 }
 
-export function ProfileResults({ model }: ProfileResultsProps) {
+export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) {
   const previewCardRef = useRef<HTMLDivElement>(null)
   const [activeView, setActiveView] = useState<ProfileResultsView>('repos')
   const [tweetModalOpen, setTweetModalOpen] = useState(false)
@@ -77,30 +80,41 @@ export function ProfileResults({ model }: ProfileResultsProps) {
     setExpandedRepos((current) => ({ ...current, [fullName]: !current[fullName] }))
   }
 
+  if (model.counts.mergedPRs === 0) {
+    return (
+      <section
+        aria-label="Profile results"
+        className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center"
+      >
+        <svg className="h-9 w-9 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <circle cx="6" cy="6" r="2.5" />
+          <circle cx="18" cy="18" r="2.5" />
+          <path d="M6 8.5v7a2.5 2.5 0 0 0 2.5 2.5H15.5" />
+        </svg>
+        <h2 className="text-lg font-semibold text-foreground">
+          {isOwner ? 'Your timeline is empty' : 'Nothing public yet'}
+        </h2>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {isOwner
+            ? 'Sync your merged pull requests, then choose which repositories to show here.'
+            : `@${model.identity.username} has not shared any merged pull requests yet.`}
+        </p>
+        {isOwner ? (
+          <Link
+            href="/settings"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Sync my PRs
+          </Link>
+        ) : null}
+      </section>
+    )
+  }
+
   return (
     <section className={styles.root} aria-label="Profile results">
       <div className={styles.inner}>
         <div className={styles.resultsHeader}>
-          <div className={styles.userInfo}>
-            {model.identity.avatarUrl ? (
-              <img
-                src={model.identity.avatarUrl}
-                alt={model.identity.displayName}
-                className={styles.userAvatar}
-              />
-            ) : (
-              <span className={styles.userAvatarFallback} aria-hidden="true">
-                {model.identity.username.slice(0, 1).toUpperCase()}
-              </span>
-            )}
-            <div>
-              <div className={styles.userName}>{model.identity.displayName}</div>
-              <div className={styles.userMeta}>
-                @{model.identity.username} · {model.counts.mergedPRs} merged PRs · {model.counts.repos} repos
-              </div>
-            </div>
-          </div>
-
           <div className={styles.resultsActions}>
             <button
               type="button"
@@ -122,7 +136,7 @@ export function ProfileResults({ model }: ProfileResultsProps) {
               onClick={handleScreenshot}
               disabled={isDownloading}
             >
-              {isDownloading ? 'Capturing…' : 'Screenshot'}
+              {isDownloading ? 'Capturing…' : 'Download PNG'}
             </button>
           </div>
         </div>

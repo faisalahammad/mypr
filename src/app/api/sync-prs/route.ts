@@ -1,7 +1,13 @@
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase'
-import { syncUserPRs } from '@/lib/sync-user'
-import type { DateRange } from '@/lib/github'
+import { syncUserPRs, type SyncResult } from '@/lib/sync-user'
+import type { DateRange, SyncProgressEvent } from '@/lib/github'
 import { NextRequest, NextResponse } from 'next/server'
+
+function getSyncMessage(result: SyncResult): string {
+  return result.synced === 0
+    ? 'No merged pull requests found for the selected time range.'
+    : `Synced ${result.synced} merged PR${result.synced !== 1 ? 's' : ''} across ${result.repos_found} repo${result.repos_found !== 1 ? 's' : ''}`
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,15 +61,50 @@ export async function POST(request: NextRequest) {
       // No body / invalid JSON - use default
     }
 
+    const syncProfile = {
+      id: session.user.id,
+      github_username: typedProfile.github_username,
+      github_access_token: typedProfile.github_access_token,
+    }
+
+    // Live progress: newline-delimited JSON, one progress event per line,
+    // ending with a "done" or "error" line.
+    if (request.headers.get('accept')?.includes('application/x-ndjson')) {
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const send = (payload: SyncProgressEvent | Record<string, unknown>) =>
+            controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`))
+
+          const result = await syncUserPRs(syncProfile, dateRange, {
+            onProgress: (event) => send(event),
+          })
+
+          if (result.error) {
+            send({ stage: 'error', message: result.error })
+          } else {
+            send({
+              stage: 'done',
+              synced: result.synced,
+              repos_found: result.repos_found,
+              github_username: typedProfile.github_username,
+              message: getSyncMessage(result),
+            })
+          }
+          controller.close()
+        },
+      })
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'application/x-ndjson; charset=utf-8',
+          'Cache-Control': 'no-store',
+        },
+      })
+    }
+
     // Delegate to shared sync logic
-    const result = await syncUserPRs(
-      {
-        id: session.user.id,
-        github_username: typedProfile.github_username,
-        github_access_token: typedProfile.github_access_token,
-      },
-      dateRange
-    )
+    const result = await syncUserPRs(syncProfile, dateRange)
 
     if (result.error) {
       return NextResponse.json(
@@ -76,9 +117,7 @@ export async function POST(request: NextRequest) {
       success: true,
       synced: result.synced,
       repos_found: result.repos_found,
-      message: result.synced === 0
-        ? 'No merged pull requests found for the selected time range.'
-        : `Synced ${result.synced} merged PR${result.synced !== 1 ? 's' : ''} across ${result.repos_found} repo${result.repos_found !== 1 ? 's' : ''}`,
+      message: getSyncMessage(result),
     })
 
   } catch (error) {
@@ -123,6 +162,12 @@ export async function GET(request: NextRequest) {
 
     const typedRepos = (repos ?? []) as Array<{ last_synced_at: string | null }>
 
+    const { data: ownProfile } = await supabase
+      .from('profiles')
+      .select('github_username')
+      .eq('id', session.user.id)
+      .maybeSingle()
+
     const { data: syncMeta } = await supabase
       .from('sync_metadata')
       .select('last_date_range, auto_sync_enabled, updated_at')
@@ -147,6 +192,7 @@ export async function GET(request: NextRequest) {
       total_prs: count || 0,
       last_date_range: typedMeta?.last_date_range ?? null,
       auto_sync_enabled: typedMeta?.auto_sync_enabled ?? true,
+      github_username: (ownProfile as { github_username: string } | null)?.github_username ?? null,
     })
 
   } catch (error) {

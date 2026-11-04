@@ -109,7 +109,7 @@ describe('FeedContainer', () => {
   it('shows the empty state when the feed has no items', () => {
     render(<FeedContainer initialFeed={makeFeedPage([], null)} userId="user-1" />)
 
-    expect(screen.getByText('No pull requests in your feed yet.'))
+    expect(screen.getByText('No pull requests here yet'))
     expect(screen.queryByTestId('pr-card')).not.toBeInTheDocument()
   })
 
@@ -133,7 +133,7 @@ describe('FeedContainer', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/feed?cursor=cursor-1&limit=10',
+      '/api/feed?cursor=cursor-1&limit=10&scope=everyone',
       { cache: 'no-store' }
     )
     expect(screen.getByText('You are all caught up.'))

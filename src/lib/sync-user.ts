@@ -1,5 +1,5 @@
 import { createSupabaseServiceClient } from '@/lib/supabase'
-import { searchMergedPRs, getPRSummary, getPRKey, type DateRange } from '@/lib/github'
+import { searchMergedPRs, getPRSummary, getPRKey, type DateRange, type SyncProgressHandler } from '@/lib/github'
 import { getProfileResultsTag } from '@/lib/profile-results'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import type { Database } from '@/lib/supabase'
@@ -31,6 +31,8 @@ interface SyncUserOptions {
    * cut off by the function timeout picks up where it stopped the next day.
    */
   skipCachedPRs?: boolean
+  /** Receives progress events while the sync runs (used for the live sync UI) */
+  onProgress?: SyncProgressHandler
 }
 
 /**
@@ -45,7 +47,7 @@ export async function syncUserPRs(
   dateRange: DateRange,
   options: SyncUserOptions = {}
 ): Promise<SyncResult> {
-  const { persistDateRange = true, skipCachedPRs = false } = options
+  const { persistDateRange = true, skipCachedPRs = false, onProgress } = options
   const serviceClient = createSupabaseServiceClient()
   const now = new Date().toISOString()
 
@@ -88,7 +90,8 @@ export async function syncUserPRs(
       profile.github_access_token,
       profile.github_username,
       dateRange,
-      cachedPRs
+      cachedPRs,
+      onProgress
     )
 
     if (reposWithPRs.length === 0) {
@@ -103,8 +106,15 @@ export async function syncUserPRs(
 
     let totalSynced = 0
 
-    for (const repoData of reposWithPRs) {
+    for (const [repoIndex, repoData] of reposWithPRs.entries()) {
       const { repo_full_name, description, owner_avatar_url, prs } = repoData
+      onProgress?.({
+        stage: 'saving',
+        repo: repo_full_name,
+        prs: prs.length,
+        done: repoIndex + 1,
+        total: reposWithPRs.length,
+      })
 
       // Preserve is_active status for existing repos; new repos default to false
       const { data: existingRepo } = await serviceClient

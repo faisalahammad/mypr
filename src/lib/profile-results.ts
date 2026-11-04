@@ -12,6 +12,12 @@ export interface ProfileResultsModel {
     mergedPRs: number
     repos: number
   }
+  stats: {
+    linesAdded: number
+    lastSyncedAt: string | null
+  }
+  /** Merged PRs per UTC day (YYYY-MM-DD) over the last 366 days */
+  activity: Record<string, number>
   repoGrid: Array<{
     fullName: string
     name: string
@@ -225,6 +231,19 @@ export function buildProfileResultsModel({
 
   const timelineByMonth = Array.from(monthGroups.values())
 
+  const activityStart = Date.now() - 366 * 24 * 60 * 60 * 1000
+  const activity: Record<string, number> = {}
+  let linesAdded = 0
+  let lastSyncedAt: string | null = null
+  for (const pr of prs) {
+    linesAdded += pr.additions ?? 0
+    if (pr.synced_at && (!lastSyncedAt || pr.synced_at > lastSyncedAt)) lastSyncedAt = pr.synced_at
+    if (Date.parse(pr.merged_at) >= activityStart) {
+      const day = pr.merged_at.slice(0, 10)
+      activity[day] = (activity[day] ?? 0) + 1
+    }
+  }
+
   const model: ProfileResultsModel = {
     identity: {
       avatarUrl: profile.github_avatar_url,
@@ -235,6 +254,11 @@ export function buildProfileResultsModel({
       mergedPRs,
       repos,
     },
+    stats: {
+      linesAdded,
+      lastSyncedAt,
+    },
+    activity,
     repoGrid,
     summary: {
       mergedPRs,

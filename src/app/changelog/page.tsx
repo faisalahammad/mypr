@@ -25,6 +25,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: 'November 4, 2026',
+    items: [
+      'New Explore page: search developers by GitHub username and browse who merged PRs recently',
+      'Follow developers from their profile, the feed, or Explore, and switch the feed between Following and Everyone',
+      'Feed cards now show a Follow button, the PR number, a link to the repository, and an additions/deletions bar',
+      'Profiles open with a new header: merged PRs, repos, and lines added, your top repositories, and a GitHub-style activity grid for the last year',
+      'Settings now walks new users through setup with a checklist and shows live progress while a sync runs',
+      'Repositories in Settings are one searchable list; toggling a repo keeps it in place and says whether it is shown on your profile',
+      'Empty profiles, feeds, and repository lists now tell you what to do next',
+    ],
+  },
+  {
     date: 'October 10, 2026',
     items: [
       'Daily auto sync (6am Bangladesh time) runs reliably again for every user, picking up newly merged PRs',

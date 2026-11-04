@@ -64,6 +64,7 @@ type ReactionSelectBuilder = {
 type PullRequestFilterBuilder = {
   order: (column: string, options: { ascending: boolean }) => PullRequestFilterBuilder
   lte: (column: string, value: string) => PullRequestFilterBuilder
+  in: (column: string, values: string[]) => PullRequestFilterBuilder
   limit: (value: number) => ListResult<CandidatePRRow[]>
 }
 
@@ -137,12 +138,17 @@ export async function buildFeed(
   supabase: FeedSupabaseClient,
   userId: string,
   cursor: string | null,
-  pageSize: number = FEED_PAGE_SIZE
+  pageSize: number = FEED_PAGE_SIZE,
+  authorIds?: string[]
 ): Promise<FeedPage> {
   const generated_at = new Date().toISOString()
   const safePageSize = Math.max(1, pageSize)
   const batchLimit = Math.max(safePageSize * 2, 20)
   const decodedCursor = decodeCursor(cursor)
+
+  if (authorIds && authorIds.length === 0) {
+    return { items: [], next_cursor: null, generated_at }
+  }
 
   const collectedRows: CandidatePRRow[] = []
   // Position to resume strictly after, matching the query ordering
@@ -183,6 +189,11 @@ export async function buildFeed(
 
     if (queryBoundary) {
       query = query.lte('merged_at', queryBoundary.merged_at)
+    }
+
+    // Following tab: only PRs by the given authors
+    if (authorIds) {
+      query = query.in('user_id', authorIds)
     }
 
     const { data: rawRows } = await query.limit(batchLimit)
@@ -246,6 +257,18 @@ export async function buildFeed(
     next_cursor,
     generated_at,
   }
+}
+
+export async function getFollowingIds(
+  supabase: FeedSupabaseClient,
+  userId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId)
+
+  return ((data ?? []) as Array<{ following_id: string }>).map((row) => row.following_id)
 }
 
 export async function getCachedFeed(

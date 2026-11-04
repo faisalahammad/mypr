@@ -10,6 +10,12 @@ export type ReactionType = 'love' | 'thumbsup' | 'informative' | 'support' | 'fu
 
 export type ReactionCounts = Record<ReactionType, number>
 
+export type FeedScope = 'everyone' | 'following'
+
+export function parseFeedScope(value: string | null | undefined): FeedScope {
+  return value === 'following' ? 'following' : 'everyone'
+}
+
 export interface FeedPR {
   id: string
   pr_number: number

@@ -64,11 +64,13 @@ interface MockPullRequestBuilder {
   select: jest.Mock<MockPullRequestBuilder, []>
   order: jest.Mock<MockPullRequestBuilder, []>
   lte: jest.Mock<MockPullRequestBuilder, [string, string]>
+  in: jest.Mock<MockPullRequestBuilder, [string, string[]]>
   limit: jest.Mock<QueryResult<PullRequestRow[]>, [number]>
 }
 
 function createPullRequestQuery(dataset: PullRequestRow[]) {
   let mergedAtCeiling: string | null = null
+  let authorFilter: string[] | null = null
 
   const compareRows = (left: PullRequestRow, right: PullRequestRow) => {
     if (left.merged_at !== right.merged_at) {
@@ -84,8 +86,14 @@ function createPullRequestQuery(dataset: PullRequestRow[]) {
       mergedAtCeiling = value
       return builder
     }),
+    in: jest.fn((_column: string, values: string[]) => {
+      authorFilter = values
+      return builder
+    }),
     limit: jest.fn((value: number) => {
-      const sorted = [...dataset].sort(compareRows)
+      const sorted = [...dataset]
+        .filter((row) => !authorFilter || authorFilter.includes(row.user_id))
+        .sort(compareRows)
       const filtered = mergedAtCeiling
         ? sorted.filter((row) => row.merged_at <= mergedAtCeiling!)
         : sorted
@@ -184,6 +192,28 @@ function allAuthorsActive(prs: PullRequestRow[]) {
 }
 
 describe('buildFeed', () => {
+  it('limits the feed to the given authors for the Following tab', async () => {
+    const prs = [
+      makePullRequestRow({ id: 'pr-a', user_id: 'author-a', merged_at: isoHoursAgo(2) }),
+      makePullRequestRow({ id: 'pr-b', user_id: 'author-b', merged_at: isoHoursAgo(1) }),
+    ]
+    const supabase = createFeedSupabaseMock({ pullRequests: prs, activeRepos: allAuthorsActive(prs) })
+
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 10, ['author-a'])
+
+    expect(feed.items.map((item) => item.id)).toEqual(['pr-a'])
+  })
+
+  it('returns an empty page without querying when following nobody', async () => {
+    const supabase = createFeedSupabaseMock({ pullRequests: [makePullRequestRow()] })
+
+    const feed = await buildFeed(supabase as unknown as FeedSupabaseClient, 'user-1', null, 10, [])
+
+    expect(feed.items).toEqual([])
+    expect(feed.next_cursor).toBeNull()
+    expect(supabase.from).not.toHaveBeenCalled()
+  })
+
   it('returns every registered user\'s PRs newest first', async () => {
     const prs = [
       makePullRequestRow({ id: 'pr-old', user_id: 'author-a', merged_at: isoHoursAgo(72) }),

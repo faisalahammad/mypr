@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation'
 import { unstable_cache } from 'next/cache'
 import {
   createSupabasePublicClient,
+  createSupabaseServerClient,
   getPublicActiveRepositoriesForUsers,
   getUserProfile,
 } from '@/lib/supabase'
+import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ScrollToTop from '@/components/ui/ScrollToTop'
@@ -123,7 +125,21 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   if (!publicProfileResults) {
     notFound()
   }
-  const currentUserProfile = await getUserProfile() as { github_username: string; github_avatar_url: string | null } | null
+  const currentUserProfile = await getUserProfile() as { id: string; github_username: string; github_avatar_url: string | null } | null
+  const profileId = publicProfileResults.profile.id
+  const isOwner = currentUserProfile?.id === profileId
+  let isFollowing = false
+
+  if (currentUserProfile && !isOwner) {
+    const supabase = await createSupabaseServerClient()
+    const { data: follow } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', currentUserProfile.id)
+      .eq('following_id', profileId)
+      .maybeSingle()
+    isFollowing = Boolean(follow)
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -134,7 +150,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
       <main className="flex-1 py-10">
         <AppShell>
-          <ProfileResults model={publicProfileResults.model} />
+          <ProfileHeader
+            model={publicProfileResults.model}
+            profileId={profileId}
+            viewer={currentUserProfile ? { id: currentUserProfile.id, isOwner, isFollowing } : null}
+          />
+          <ProfileResults model={publicProfileResults.model} isOwner={isOwner} />
         </AppShell>
       </main>
 

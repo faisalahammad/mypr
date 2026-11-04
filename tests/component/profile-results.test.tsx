@@ -28,6 +28,11 @@ const model: ProfileResultsModel = {
     mergedPRs: 4,
     repos: 2,
   },
+  stats: {
+    linesAdded: 1200,
+    lastSyncedAt: null,
+  },
+  activity: {},
   repoGrid: [
     {
       fullName: 'vercel/next.js',
@@ -117,8 +122,6 @@ describe('ProfileResults', () => {
   it('renders prototype-style header metadata and defaults to repo grid', () => {
     render(<ProfileResults model={model} />)
 
-    expect(screen.getByText('Faisal Ahammad')).toBeInTheDocument()
-    expect(screen.getByText('@faisalahammad · 4 merged PRs · 2 repos')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /repo grid/i })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('next.js')).toBeInTheDocument()
     expect(screen.queryByText('Top Repositories')).not.toBeInTheDocument()
@@ -159,7 +162,7 @@ describe('ProfileResults', () => {
   it('captures only the preview card when taking a screenshot', async () => {
     render(<ProfileResults model={model} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /screenshot/i }))
+    fireEvent.click(screen.getByRole('button', { name: /download png/i }))
 
     await waitFor(() => {
       expect(mockDownloadAsImage).toHaveBeenCalledTimes(1)
@@ -174,7 +177,7 @@ describe('ProfileResults', () => {
     render(<ProfileResults model={model} />)
 
     fireEvent.click(screen.getByRole('button', { name: /timeline/i }))
-    fireEvent.click(screen.getByRole('button', { name: /screenshot/i }))
+    fireEvent.click(screen.getByRole('button', { name: /download png/i }))
 
     await waitFor(() => {
       expect(mockDownloadAsImage).toHaveBeenCalledTimes(1)
@@ -200,8 +203,21 @@ describe('ProfileResults', () => {
 
     render(<ProfileResults model={model} />)
 
-    expect(screen.getByText('@faisalahammad · 4 merged PRs · 2 repos')).toBeInTheDocument()
-    expect(screen.queryByText('@faisalahammad · 99 merged PRs · 9 repos')).not.toBeInTheDocument()
+    expect(screen.getByText('next.js')).toBeInTheDocument()
+  })
+
+  it('shows a sync call to action to the owner when there are no PRs', () => {
+    render(<ProfileResults model={{ ...model, counts: { mergedPRs: 0, repos: 0 } }} isOwner />)
+
+    expect(screen.getByText('Your timeline is empty')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sync my PRs' })).toHaveAttribute('href', '/settings')
+  })
+
+  it('tells visitors nothing is public yet when there are no PRs', () => {
+    render(<ProfileResults model={{ ...model, counts: { mergedPRs: 0, repos: 0 } }} />)
+
+    expect(screen.getByText('Nothing public yet')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /tweet this/i })).not.toBeInTheDocument()
   })
 
   it('renders the timeline preview with a dedicated rail and marker for each entry', () => {

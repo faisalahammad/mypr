@@ -4,11 +4,34 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import type { FeedPR, ReactionCounts, ReactionType } from '@/lib/feed-types'
+import { FollowButton } from '@/components/FollowButton'
 import { ReactionBar } from './ReactionBar'
 
 interface PRFeedCardProps {
   pr: FeedPR
   currentUserId: string
+  isFollowingAuthor?: boolean
+  onFollowChange?: (authorId: string, isFollowing: boolean) => void
+}
+
+function DiffBar({ additions, deletions }: { additions: number; deletions: number }) {
+  const total = additions + deletions
+  if (total === 0) return null
+  const addPercent = Math.round((additions / total) * 100)
+
+  return (
+    <div
+      className="flex h-1.5 overflow-hidden rounded-full bg-muted"
+      role="img"
+      aria-label={`${addPercent}% additions, ${100 - addPercent}% deletions`}
+    >
+      {/* svg so the ratio needs no inline style */}
+      <svg className="h-full w-full" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true">
+        <rect x="0" y="0" width={addPercent} height="1" className="fill-green-600 dark:fill-green-400" />
+        <rect x={addPercent} y="0" width={100 - addPercent} height="1" className="fill-red-600 dark:fill-red-400" />
+      </svg>
+    </div>
+  )
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -128,7 +151,7 @@ function truncateDescriptionSegments(segments: DescriptionSegment[], maxLength: 
   return truncated
 }
 
-export function PRFeedCard({ pr }: PRFeedCardProps) {
+export function PRFeedCard({ pr, currentUserId, isFollowingAuthor = false, onFollowChange }: PRFeedCardProps) {
   const [reactionCounts, setReactionCounts] = useState<ReactionCounts>(pr.reaction_counts)
   const [userReaction, setUserReaction] = useState<ReactionType | null>(pr.user_reaction)
   const descriptionSegments = pr.body_summary
@@ -194,15 +217,29 @@ export function PRFeedCard({ pr }: PRFeedCardProps) {
             >
               @{pr.author.github_username}
             </Link>
-            <div className="text-xs text-muted-foreground">{formatRelativeTime(pr.merged_at)}</div>
+            <div className="text-xs text-muted-foreground">merged {formatRelativeTime(pr.merged_at)}</div>
           </div>
         </div>
+        {pr.author.id !== currentUserId ? (
+          <FollowButton
+            key={`${pr.author.id}-${isFollowingAuthor}`}
+            targetUserId={pr.author.id}
+            initialIsFollowing={isFollowingAuthor}
+            onChange={(following) => onFollowChange?.(pr.author.id, following)}
+          />
+        ) : null}
       </div>
 
-      <div className="mt-3">
-        <span className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground/80">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <a
+          href={`https://github.com/${pr.repo_full_name}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-full bg-muted px-2.5 py-1 font-mono text-xs font-medium text-foreground/80 hover:text-primary"
+        >
           {pr.repo_full_name}
-        </span>
+        </a>
+        <span className="font-mono text-xs text-muted-foreground">#{pr.pr_number}</span>
       </div>
 
       <div className="mt-3 space-y-2">
@@ -232,11 +269,12 @@ export function PRFeedCard({ pr }: PRFeedCardProps) {
           </p>
         ) : null}
         <p className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
-          <span className="text-green-600">+{pr.additions}</span>
-          <span className="text-red-600">−{pr.deletions}</span>
+          <span className="text-green-600 dark:text-green-400">+{pr.additions}</span>
+          <span className="text-red-600 dark:text-red-400">−{pr.deletions}</span>
           <span className="text-foreground/80">·</span>
-          <span className="text-foreground">{pr.commits_count} commits</span>
+          <span className="text-foreground">{pr.commits_count} commit{pr.commits_count === 1 ? '' : 's'}</span>
         </p>
+        <DiffBar additions={pr.additions} deletions={pr.deletions} />
       </div>
 
       <ReactionBar

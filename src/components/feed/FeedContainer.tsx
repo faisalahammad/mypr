@@ -1,13 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FEED_PAGE_SIZE, type FeedPage, type FeedPR } from '@/lib/feed-types'
+import Link from 'next/link'
+import { Users } from 'lucide-react'
+import { FEED_PAGE_SIZE, type FeedPage, type FeedPR, type FeedScope } from '@/lib/feed-types'
 import { FeedSkeleton } from './FeedSkeleton'
 import { PRFeedCard } from './PRFeedCard'
 
 interface FeedContainerProps {
   initialFeed: FeedPage
   userId: string
+  scope?: FeedScope
+  initialFollowingIds?: string[]
 }
 
 function mergeFeedItems(existing: FeedPR[], incoming: FeedPR[]): FeedPR[] {
@@ -24,7 +28,13 @@ function mergeFeedItems(existing: FeedPR[], incoming: FeedPR[]): FeedPR[] {
   return merged
 }
 
-export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
+export function FeedContainer({
+  initialFeed,
+  userId,
+  scope = 'everyone',
+  initialFollowingIds = [],
+}: FeedContainerProps) {
+  const [followingIds, setFollowingIds] = useState<Set<string>>(() => new Set(initialFollowingIds))
   const [items, setItems] = useState<FeedPR[]>(initialFeed.items)
   const [nextCursor, setNextCursor] = useState<string | null>(initialFeed.next_cursor)
   const [isLoading, setIsLoading] = useState(false)
@@ -43,7 +53,7 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
 
     try {
       const response = await fetch(
-        `/api/feed?cursor=${encodeURIComponent(nextCursor)}&limit=${FEED_PAGE_SIZE}`,
+        `/api/feed?cursor=${encodeURIComponent(nextCursor)}&limit=${FEED_PAGE_SIZE}&scope=${scope}`,
         { cache: 'no-store' }
       )
 
@@ -60,7 +70,16 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [nextCursor, isLoading])
+  }, [nextCursor, isLoading, scope])
+
+  const handleFollowChange = useCallback((authorId: string, following: boolean) => {
+    setFollowingIds((current) => {
+      const next = new Set(current)
+      if (following) next.add(authorId)
+      else next.delete(authorId)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     const node = sentinelRef.current
@@ -89,9 +108,26 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
   }, [loadMore, nextCursor])
 
   if (items.length === 0) {
+    const followsNobody = scope === 'following' && followingIds.size === 0
     return (
-      <div className="border-t border-border py-8 text-sm text-muted-foreground">
-        No pull requests in your feed yet.
+      <div className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+        <Users className="h-9 w-9 text-primary" aria-hidden="true" />
+        <h2 className="text-lg font-semibold text-foreground">
+          {followsNobody ? 'You are not following anyone yet' : 'No pull requests here yet'}
+        </h2>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {followsNobody
+            ? 'Follow developers to see their merged pull requests in this tab.'
+            : scope === 'following'
+              ? 'The developers you follow have no public merged pull requests yet.'
+              : 'Once developers sync their merged pull requests, they show up here.'}
+        </p>
+        <Link
+          href="/explore"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Explore developers
+        </Link>
       </div>
     )
   }
@@ -100,7 +136,13 @@ export function FeedContainer({ initialFeed, userId }: FeedContainerProps) {
     <div>
       <div>
         {items.map((pr) => (
-          <PRFeedCard key={pr.id} pr={pr} currentUserId={userId} />
+          <PRFeedCard
+            key={pr.id}
+            pr={pr}
+            currentUserId={userId}
+            isFollowingAuthor={followingIds.has(pr.author.id)}
+            onFollowChange={handleFollowChange}
+          />
         ))}
       </div>
 

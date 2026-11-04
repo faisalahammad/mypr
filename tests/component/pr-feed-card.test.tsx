@@ -59,6 +59,20 @@ const feedPR: FeedPR = {
 }
 
 describe('PRFeedCard', () => {
+  it('shows Follow for other authors, the PR number, and a diff ratio bar', () => {
+    render(<PRFeedCard pr={feedPR} currentUserId="user-1" />)
+
+    expect(screen.getByRole('button', { name: 'Follow' })).toBeInTheDocument()
+    expect(screen.getByText('#1')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '91% additions, 9% deletions' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'gocodebox/lifterlms' })).toHaveAttribute('href', 'https://github.com/gocodebox/lifterlms')
+  })
+
+  it('hides Follow on your own PRs', () => {
+    render(<PRFeedCard pr={feedPR} currentUserId="user-2" />)
+    expect(screen.queryByRole('button', { name: /follow/i })).not.toBeInTheDocument()
+  })
+
   it('renders author and repo metadata with stronger readable styles', () => {
     render(<PRFeedCard pr={feedPR} currentUserId="user-1" />)
 

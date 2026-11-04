@@ -34,15 +34,13 @@ const mockSyncInfo = {
   total_prs: 10,
 }
 
-function getSectionRepoHeadings(sectionHeading: string) {
-  const heading = screen.getByRole('heading', { level: 3, name: sectionHeading })
-  const section = heading.closest('section')
-
-  if (!section) {
-    throw new Error(`Unable to find section container for ${sectionHeading}`)
-  }
-
-  return Array.from(section.querySelectorAll('h4')).map((node) => node.textContent)
+/** Repo rows in display order, with whether each is shown on the profile */
+function getRepoRows() {
+  const list = screen.getByRole('list', { name: 'Repositories' })
+  return Array.from(list.querySelectorAll('li')).map((row) => ({
+    name: row.querySelector('p')?.textContent,
+    shown: row.querySelector('[role="switch"]')?.getAttribute('aria-checked') === 'true',
+  }))
 }
 
 function expectEnabledCount(text: string) {
@@ -174,8 +172,8 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    expect(await screen.findByText('mypr')).toBeInTheDocument()
-    expect(screen.getByText('private-repo')).toBeInTheDocument()
+    expect(await screen.findByText('faisal/mypr')).toBeInTheDocument()
+    expect(screen.getByText('faisal/private-repo')).toBeInTheDocument()
     expect((await screen.findAllByText('Portfolio sync app')).length).toBeGreaterThan(0)
   })
 
@@ -184,7 +182,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    await screen.findByText('mypr')
+    await screen.findByText('faisal/mypr')
     expectEnabledCount('1 of 2 enabled')
     expect(screen.getByRole('switch', { name: /toggle all repositories/i })).toBeInTheDocument()
   })
@@ -194,7 +192,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    await screen.findByText('mypr')
+    await screen.findByText('faisal/mypr')
 
     expect(screen.getByText('Visible PRs')).toBeInTheDocument()
     expect(screen.getByText('Lifetime PRs')).toBeInTheDocument()
@@ -203,7 +201,7 @@ describe('Settings Page', () => {
     expect(getSummaryCardValue('Active repos')).toBe('1')
   })
 
-  it('renders active and inactive sections sorted alphabetically by repo name', async () => {
+  it('renders one list sorted alphabetically by repo name', async () => {
     mockInitialFetch({
       repos: [
         {
@@ -239,26 +237,49 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    expect(await screen.findByRole('heading', { level: 3, name: 'Active repositories' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 3, name: 'Inactive repositories' })).toBeInTheDocument()
-    expect(getSectionRepoHeadings('Active repositories')).toEqual(['alpha', 'beta'])
-    expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['gamma', 'zeta'])
+    await screen.findByText('alpha/alpha')
+    expect(getRepoRows().map((row) => row.name)).toEqual(['alpha/alpha', 'zeta/beta', 'omega/gamma', 'aardvark/zeta'])
   })
 
-  it('uses stronger styling for repository section headings and repo counts', async () => {
+  it('shows the setup checklist until a repo is shown on the profile', async () => {
+    mockInitialFetch({ repos: mockRepos.map((repo) => ({ ...repo, is_active: false })) })
+
+    render(<SettingsPage />)
+
+    expect(await screen.findByRole('heading', { name: 'Get your profile ready' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Choose repos' })).toHaveAttribute('href', '#repositories')
+  })
+
+  it('hides the setup checklist once synced with a shown repo', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
-    const activeHeading = await screen.findByRole('heading', { level: 3, name: 'Active repositories' })
-    const activeSection = activeHeading.closest('section')
-    const activeCount = activeSection?.querySelector('p')
+    await screen.findByText('faisal/mypr')
+    expect(screen.queryByRole('heading', { name: 'Get your profile ready' })).not.toBeInTheDocument()
+  })
 
-    expect(activeHeading.className).toContain('text-lg')
-    expect(activeHeading.className).toContain('text-foreground')
-    expect(activeCount?.textContent).toBe('1 repo')
-    expect(activeCount?.className).toContain('text-sm')
-    expect(activeCount?.className).toContain('text-muted-foreground')
+  it('offers a sync button in the empty repository state', async () => {
+    mockInitialFetch({ repos: [], syncInfo: { last_synced: null as unknown as string, total_prs: 0 } })
+
+    render(<SettingsPage />)
+
+    expect(await screen.findByText('No repositories discovered yet')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sync my PRs' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sync now' })).toBeInTheDocument()
+  })
+
+  it('filters repositories by name', async () => {
+    mockInitialFetch()
+
+    render(<SettingsPage />)
+
+    await screen.findByText('faisal/mypr')
+    fireEvent.change(screen.getByRole('searchbox', { name: /filter repositories/i }), {
+      target: { value: 'private' },
+    })
+
+    expect(getRepoRows().map((row) => row.name)).toEqual(['faisal/private-repo'])
   })
 
   it('shows an actionable repositories error state when repo loading fails', async () => {
@@ -275,7 +296,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    await screen.findByText('mypr')
+    await screen.findByText('faisal/mypr')
 
     fireEvent.change(screen.getByRole('combobox', { name: /date range/i }), {
       target: { value: '6m' },
@@ -293,19 +314,21 @@ describe('Settings Page', () => {
     })
   })
 
-  it('optimistically toggles a repository, moves it between sections, and updates the enabled count', async () => {
+  it('optimistically toggles a repository in place and updates the enabled count', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
-    const toggle = await screen.findByRole('switch', { name: /toggle repository faisal\/private-repo/i })
+    const toggle = await screen.findByRole('switch', { name: /show faisal\/private-repo on profile/i })
 
     fireEvent.click(toggle)
 
     await waitFor(() => {
       expectEnabledCount('2 of 2 enabled')
-      expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
-      expect(screen.queryByRole('heading', { level: 3, name: 'Inactive repositories' })).not.toBeInTheDocument()
+      expect(getRepoRows()).toEqual([
+        { name: 'faisal/mypr', shown: true },
+        { name: 'faisal/private-repo', shown: true },
+      ])
       expect(getSummaryCardValue('Visible PRs')).toBe('10')
       expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
       expect(getSummaryCardValue('Active repos')).toBe('2')
@@ -323,7 +346,7 @@ describe('Settings Page', () => {
 
     await waitFor(() => {
       expectEnabledCount('2 of 2 enabled')
-      expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr', 'private-repo'])
+      expect(getRepoRows().every((row) => row.shown)).toBe(true)
       expect(getSummaryCardValue('Visible PRs')).toBe('10')
       expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
       expect(getSummaryCardValue('Active repos')).toBe('2')
@@ -366,22 +389,21 @@ describe('Settings Page', () => {
 
     await waitFor(() => {
       expectEnabledCount('0 of 2 enabled')
-      expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['mypr', 'private-repo'])
-      expect(screen.queryByRole('heading', { level: 3, name: 'Active repositories' })).not.toBeInTheDocument()
+      expect(getRepoRows().some((row) => row.shown)).toBe(false)
       expect(getSummaryCardValue('Visible PRs')).toBe('0')
       expect(getSummaryCardValue('Lifetime PRs')).toBe('10')
       expect(getSummaryCardValue('Active repos')).toBe('0')
     })
   })
 
-  it('uses public visibility copy instead of hidden-from-profile copy', async () => {
+  it('labels repos as shown or hidden on the profile', async () => {
     mockInitialFetch()
 
     render(<SettingsPage />)
 
-    expect((await screen.findAllByText('Visible on profile, timeline, and feed')).length).toBeGreaterThan(0)
-    expect(screen.queryByText('Hidden from profile')).not.toBeInTheDocument()
-    expect(screen.queryByText('Visible on profile')).not.toBeInTheDocument()
+    expect(await screen.findByText(/8 merged PRs · Shown on profile/)).toBeInTheDocument()
+    expect(screen.getByText(/2 merged PRs · Hidden from profile/)).toBeInTheDocument()
+    expect(screen.queryByText('Public')).not.toBeInTheDocument()
   })
 
   it('rolls back repository state when a toggle request fails', async () => {
@@ -389,7 +411,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    const toggle = await screen.findByRole('switch', { name: /toggle repository faisal\/private-repo/i })
+    const toggle = await screen.findByRole('switch', { name: /show faisal\/private-repo on profile/i })
 
     fireEvent.click(toggle)
 
@@ -398,8 +420,10 @@ describe('Settings Page', () => {
     })
 
     expectEnabledCount('1 of 2 enabled')
-    expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr'])
-    expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['private-repo'])
+    expect(getRepoRows()).toEqual([
+      { name: 'faisal/mypr', shown: true },
+      { name: 'faisal/private-repo', shown: false },
+    ])
   })
 
   it('rolls back bulk repository state when the master toggle request fails', async () => {
@@ -407,7 +431,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    await screen.findByText('mypr')
+    await screen.findByText('faisal/mypr')
     const masterToggle = await screen.findByRole('switch', { name: /toggle all repositories/i })
 
     fireEvent.click(masterToggle)
@@ -417,8 +441,10 @@ describe('Settings Page', () => {
     })
 
     expectEnabledCount('1 of 2 enabled')
-    expect(getSectionRepoHeadings('Active repositories')).toEqual(['mypr'])
-    expect(getSectionRepoHeadings('Inactive repositories')).toEqual(['private-repo'])
+    expect(getRepoRows()).toEqual([
+      { name: 'faisal/mypr', shown: true },
+      { name: 'faisal/private-repo', shown: false },
+    ])
   })
 
   it('supports selecting the 24 month and lifetime options', async () => {
@@ -427,7 +453,7 @@ describe('Settings Page', () => {
 
     render(<SettingsPage />)
 
-    await screen.findByText('mypr')
+    await screen.findByText('faisal/mypr')
 
     await user.selectOptions(screen.getByRole('combobox', { name: /date range/i }), '24m')
     expect(screen.getByRole('combobox', { name: /date range/i })).toHaveValue('24m')

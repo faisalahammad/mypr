@@ -6,6 +6,8 @@ import { Loader2 } from 'lucide-react'
 interface FollowButtonProps {
   targetUserId: string
   initialIsFollowing: boolean
+  /** Called after the server confirms the change */
+  onChange?: (isFollowing: boolean) => void
 }
 
 /**
@@ -14,7 +16,7 @@ interface FollowButtonProps {
  * Shows "Follow" or "Unfollow" based on current state.
  * Uses optimistic UI: updates state immediately, reverts on error.
  */
-export function FollowButton({ targetUserId, initialIsFollowing }: FollowButtonProps) {
+export function FollowButton({ targetUserId, initialIsFollowing, onChange }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -37,6 +39,8 @@ export function FollowButton({ targetUserId, initialIsFollowing }: FollowButtonP
       if (!response.ok) {
         // Revert on error
         setIsFollowing(previousState)
+      } else {
+        onChange?.(!previousState)
       }
     } catch {
       // Revert on error

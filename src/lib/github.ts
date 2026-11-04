@@ -215,11 +215,19 @@ export const getPRKey = (repoFullName: string, prNumber: number) => `${repoFullN
  * PRs whose getPRKey is in skipPRs are left out before their details are
  * fetched, and repos with no remaining PRs are dropped from the result.
  */
+export type SyncProgressEvent =
+  | { stage: 'searching' }
+  | { stage: 'details'; done: number; total: number }
+  | { stage: 'saving'; repo: string; prs: number; done: number; total: number }
+
+export type SyncProgressHandler = (event: SyncProgressEvent) => void
+
 export const searchMergedPRs = async (
   accessToken: string,
   username: string,
   dateRange: DateRange,
-  skipPRs: ReadonlySet<string> = new Set()
+  skipPRs: ReadonlySet<string> = new Set(),
+  onProgress?: SyncProgressHandler
 ): Promise<RepoWithPRs[]> => {
   const octokit = createOctokit(accessToken)
   const dateStart = getDateRangeStart(dateRange)
@@ -229,6 +237,8 @@ export const searchMergedPRs = async (
   if (dateStart) {
     query += ` merged:>=${dateStart}`
   }
+
+  onProgress?.({ stage: 'searching' })
 
   const allItems: GitHubSearchPR[] = []
   let page = 1
@@ -314,6 +324,7 @@ export const searchMergedPRs = async (
       })
     )
     detailedPRs.push(...batchResults)
+    onProgress?.({ stage: 'details', done: detailedPRs.length, total: mergedItems.length })
   }
 
   // Group by repository

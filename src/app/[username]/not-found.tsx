@@ -10,9 +10,14 @@ export default function NotFoundPage() {
           <p className="text-muted-foreground mb-6">
             We couldn&apos;t find a user with that username. Check the spelling or try searching for another developer.
           </p>
-          <Link href="/" className="inline-flex rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted">
-            Back to Home
-          </Link>
+          <div className="flex justify-center gap-2">
+            <Link href="/explore" className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              Search developers
+            </Link>
+            <Link href="/" className="inline-flex rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted">
+              Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>

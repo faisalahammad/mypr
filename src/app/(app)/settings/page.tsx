@@ -1,15 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import {
   AlertCircle,
   Calendar,
+  Check,
   CheckCircle2,
   ChevronDown,
-  Clock3,
-  Eye,
   GitPullRequest,
   RefreshCw,
+  Search,
   Sparkles,
 } from 'lucide-react'
 
@@ -18,7 +19,8 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppShell } from '@/components/layout/AppShell'
-import type { DateRange } from '@/lib/github'
+import type { DateRange, SyncProgressEvent } from '@/lib/github'
+import { cn } from '@/lib/utils'
 
 const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: '1m', label: 'Last 1 month' },
@@ -47,6 +49,35 @@ interface SyncResponse {
   total_prs: number
   last_date_range: string | null
   auto_sync_enabled: boolean
+  github_username?: string | null
+}
+
+type SyncStreamLine =
+  | SyncProgressEvent
+  | { stage: 'done'; synced: number; repos_found: number; message: string }
+  | { stage: 'error'; message: string }
+
+interface SyncProgress {
+  percent: number
+  label: string
+  log: string[]
+}
+
+const MAX_LOG_LINES = 6
+
+function describeProgress(event: SyncProgressEvent): { percent: number; label: string } {
+  // Searching ~5%, fetching PR details up to 70%, saving repos up to 100%
+  if (event.stage === 'searching') return { percent: 5, label: 'Searching GitHub for your merged PRs…' }
+  if (event.stage === 'details') {
+    return {
+      percent: 5 + Math.round((event.done / Math.max(event.total, 1)) * 65),
+      label: `Reading PR details… ${event.done} of ${event.total}`,
+    }
+  }
+  return {
+    percent: 70 + Math.round((event.done / Math.max(event.total, 1)) * 30),
+    label: `Saving repositories… ${event.done} of ${event.total}`,
+  }
 }
 
 interface CachedRepo {
@@ -97,76 +128,100 @@ function sortReposByName(repoList: CachedRepo[]) {
   })
 }
 
-interface RepoCardProps {
+interface RepoRowProps {
   repo: CachedRepo
   owner: string
-  name: string
   isPending: boolean
   onToggle: (repoFullName: string, nextValue: boolean) => void
   hasMounted: boolean
 }
 
-function RepoCard({ repo, owner, name, isPending, onToggle, hasMounted }: RepoCardProps) {
+function RepoRow({ repo, owner, isPending, onToggle, hasMounted }: RepoRowProps) {
   return (
-    <div
-      className={`rounded-3xl border p-4 transition-all ${
-        repo.is_active
-          ? 'border-primary/30 bg-primary/5 shadow-sm shadow-primary/10'
-          : 'border-border/80 bg-background/85'
-      }`}
-    >
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <Avatar className="h-9 w-9 shrink-0">
-              <AvatarImage src={repo.owner_avatar_url ?? undefined} alt={owner} />
-              <AvatarFallback className="text-xs">{owner.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="hidden rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                  {owner}
-                </span>
-                <h4 className="text-base font-semibold text-foreground">{name}</h4>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                {repo.description || 'No description available.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-background/90 px-3 py-2">
-            <Switch
-              aria-label={`Toggle repository ${repo.repo_full_name}`}
-              checked={repo.is_active}
-              disabled={isPending}
-              onCheckedChange={(checked) => onToggle(repo.repo_full_name, checked)}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
-            <GitPullRequest className="h-3.5 w-3.5 text-primary" />
-            <strong className="text-foreground">{repo.pr_count}</strong> merged PR{repo.pr_count !== 1 ? 's' : ''}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5">
-            <Clock3 className="h-3.5 w-3.5" />
-            {hasMounted ? formatDate(repo.last_synced_at) : '\u2014'}
-          </span>
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${
-            repo.is_active ? 'bg-primary/12 text-primary' : 'bg-muted/70 text-muted-foreground'
-          }`}>
-            <Eye className="h-3.5 w-3.5" />
-            {repo.is_active ? 'Public' : 'Private'}
-          </span>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          {repo.is_active ? 'Visible on profile, timeline, and feed' : 'Hidden from public profile \u2014 toggle to show'}
+    <li className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0">
+      <Avatar className="h-8 w-8 shrink-0">
+        <AvatarImage src={repo.owner_avatar_url ?? undefined} alt={owner} />
+        <AvatarFallback className="text-xs">{owner.slice(0, 2).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-mono text-sm font-medium text-foreground">{repo.repo_full_name}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {repo.pr_count} merged PR{repo.pr_count !== 1 ? 's' : ''}
+          {' · '}
+          {repo.is_active ? 'Shown on profile' : 'Hidden from profile'}
+          {hasMounted && repo.last_synced_at ? ` · synced ${formatDate(repo.last_synced_at)}` : ''}
         </p>
+        {repo.description ? (
+          <p className="mt-0.5 hidden truncate text-xs text-muted-foreground sm:block">{repo.description}</p>
+        ) : null}
       </div>
-    </div>
+      <Switch
+        aria-label={`Show ${repo.repo_full_name} on profile`}
+        checked={repo.is_active}
+        disabled={isPending}
+        onCheckedChange={(checked) => onToggle(repo.repo_full_name, checked)}
+      />
+    </li>
+  )
+}
+
+interface SetupChecklistProps {
+  hasSynced: boolean
+  hasShownRepo: boolean
+  username: string | null
+  isSyncing: boolean
+  onSync: () => void
+}
+
+function SetupChecklist({ hasSynced, hasShownRepo, username, isSyncing, onSync }: SetupChecklistProps) {
+  const steps = [
+    { label: 'Sign in with GitHub', done: true },
+    { label: 'Sync your merged PRs', done: hasSynced },
+    { label: 'Choose repositories to show on your profile', done: hasShownRepo },
+    { label: 'View and share your profile', done: false },
+  ]
+  const currentIndex = steps.findIndex((step) => !step.done)
+
+  return (
+    <Card className="p-6">
+      <h2 className="text-xl font-semibold text-foreground">Get your profile ready</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Three quick steps and your PR timeline is live.</p>
+      <ol className="mt-5 grid gap-3">
+        {steps.map((step, index) => {
+          const isCurrent = index === currentIndex
+          return (
+            <li key={step.label} className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-3 text-sm">
+              <span
+                className={cn(
+                  'flex h-6 w-6 items-center justify-center rounded-full border-2 font-mono text-xs font-semibold',
+                  step.done && 'border-emerald-600 bg-emerald-600 text-white',
+                  isCurrent && 'border-primary text-primary',
+                  !step.done && !isCurrent && 'border-border text-muted-foreground'
+                )}
+                aria-hidden="true"
+              >
+                {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+              </span>
+              <span className={cn(step.done ? 'text-muted-foreground line-through' : 'text-foreground', isCurrent && 'font-medium')}>
+                {step.label}
+                <span className="sr-only">{step.done ? ' (done)' : isCurrent ? ' (next step)' : ''}</span>
+              </span>
+              {isCurrent && index === 1 ? (
+                <Button size="sm" onClick={onSync} disabled={isSyncing}>
+                  {isSyncing ? 'Syncing…' : 'Sync now'}
+                </Button>
+              ) : isCurrent && index === 2 ? (
+                <a href="#repositories" className="text-sm font-medium text-primary hover:underline">Choose repos</a>
+              ) : isCurrent && index === 3 && username ? (
+                <Link href={`/${username}`} className="text-sm font-medium text-primary hover:underline">View profile</Link>
+              ) : (
+                <span />
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </Card>
   )
 }
 
@@ -182,17 +237,23 @@ export default function SettingsPage() {
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange>('3m')
   const [hasMounted, setHasMounted] = useState(false)
+  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null)
+  const [repoFilter, setRepoFilter] = useState('')
 
   const persistedRangeLabel = getRangeLabel(syncInfo?.last_date_range ?? null)
 
   const fetchSyncStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/sync-prs')
-      if (!response.ok) return
+      if (!response.ok) throw new Error('Could not load sync status')
       const data = await response.json()
       setSyncInfo(data)
     } catch {
-      // noop
+      setSyncStatus((current) => current ?? {
+        success: false,
+        synced: 0,
+        message: 'Could not load your sync status. Refresh the page to try again.',
+      })
     }
   }, [])
 
@@ -307,38 +368,76 @@ export default function SettingsPage() {
   const handleSync = async () => {
     setIsSyncing(true)
     setSyncStatus(null)
+    setSyncProgress({ percent: 2, label: 'Starting sync…', log: [] })
     try {
       const response = await fetch('/api/sync-prs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
         body: JSON.stringify({ dateRange }),
       })
-      const data = await response.json()
-      if (response.ok) {
+
+      let finalLine: SyncStreamLine | null = null
+      const isStream = response.headers?.get('content-type')?.includes('application/x-ndjson') && response.body
+
+      if (!response.ok || !isStream) {
+        // Error responses (and non-streaming servers) answer with plain JSON
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.message || 'Failed to sync PRs')
+        finalLine = { stage: 'done', synced: data.synced, repos_found: data.repos_found, message: data.message }
+      }
+
+      const reader = isStream && response.body ? response.body.getReader() : null
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (reader) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+          const event = JSON.parse(line) as SyncStreamLine
+          if (event.stage === 'done' || event.stage === 'error') {
+            finalLine = event
+            continue
+          }
+          const { percent, label } = describeProgress(event)
+          setSyncProgress((current) => ({
+            percent,
+            label,
+            log: event.stage === 'saving'
+              ? [...(current?.log ?? []), `${event.repo} · ${event.prs} PR${event.prs === 1 ? '' : 's'}`].slice(-MAX_LOG_LINES)
+              : current?.log ?? [],
+          }))
+        }
+      }
+
+      if (!finalLine || finalLine.stage === 'error') {
+        throw new Error(finalLine && 'message' in finalLine ? finalLine.message : 'Sync stopped before it finished')
+      }
+
+      if (finalLine.stage === 'done') {
         setSyncStatus({
           success: true,
-          synced: data.synced,
-          repos_found: data.repos_found,
-          message: data.message,
-        })
-        await Promise.all([fetchSyncStatus(), fetchRepos()])
-      } else {
-        setSyncStatus({
-          success: false,
-          synced: 0,
-          message: data.message || 'Failed to sync PRs',
-          error: data.error,
+          synced: finalLine.synced,
+          repos_found: finalLine.repos_found,
+          message: finalLine.message,
         })
       }
+      await Promise.all([fetchSyncStatus(), fetchRepos()])
     } catch (error) {
       setSyncStatus({
         success: false,
         synced: 0,
         message: error instanceof Error ? error.message : 'Network error',
-        error: 'Network error',
+        error: 'Sync failed',
       })
     } finally {
       setIsSyncing(false)
+      setSyncProgress(null)
     }
   }
 
@@ -363,11 +462,15 @@ export default function SettingsPage() {
     return { totalRepos, activeCount, totalCachedPRs, publicPRs }
   }, [repos])
 
-  const groupedRepos = useMemo(() => {
-    const activeRepos = sortReposByName(repos.filter((repo) => repo.is_active))
-    const inactiveRepos = sortReposByName(repos.filter((repo) => !repo.is_active))
-    return { activeRepos, inactiveRepos }
-  }, [repos])
+  // One list sorted by name so a row stays put when it is toggled
+  const visibleRepos = useMemo(() => {
+    const query = repoFilter.trim().toLowerCase()
+    const sorted = sortReposByName(repos)
+    return query ? sorted.filter((repo) => repo.repo_full_name.toLowerCase().includes(query)) : sorted
+  }, [repos, repoFilter])
+
+  const hasSynced = Boolean(syncInfo?.last_synced) || repos.length > 0
+  const showChecklist = hasMounted && !isLoadingRepos && !repoError && !(hasSynced && repoStats.activeCount > 0)
 
   const allReposEnabled = repoStats.totalRepos > 0 && repoStats.activeCount === repoStats.totalRepos
   const enabledReposLabel = `${repoStats.activeCount} of ${repoStats.totalRepos} enabled`
@@ -376,6 +479,16 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(235,71,153,0.12),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.88))]">
       <AppShell className="py-10">
         <div className="space-y-6">
+          {showChecklist ? (
+            <SetupChecklist
+              hasSynced={hasSynced}
+              hasShownRepo={repoStats.activeCount > 0}
+              username={syncInfo?.github_username ?? null}
+              isSyncing={isSyncing}
+              onSync={handleSync}
+            />
+          ) : null}
+
           <Card className="overflow-visible border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
             <div className="flex flex-col gap-5">
               <div className="flex items-start justify-between gap-4">
@@ -462,6 +575,28 @@ export default function SettingsPage() {
               </Button>
             </div>
 
+            {syncProgress && (
+              <div className="mt-5 grid gap-3" role="status" aria-live="polite">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-foreground">{syncProgress.label}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{syncProgress.percent}%</span>
+                </div>
+                <progress
+                  className="h-2 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-value]:bg-primary"
+                  max={100}
+                  value={syncProgress.percent}
+                  aria-label="Sync progress"
+                />
+                {syncProgress.log.length > 0 ? (
+                  <ul className="rounded-xl border border-border bg-muted/30 px-4 py-3 font-mono text-xs leading-6 text-muted-foreground">
+                    {syncProgress.log.map((line) => (
+                      <li key={line}><span className="text-emerald-600">✓</span> {line}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            )}
+
             {syncStatus && (
               <div className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-sm ${
                 syncStatus.success
@@ -480,6 +615,11 @@ export default function SettingsPage() {
                       Found {syncStatus.repos_found} repositories with merged PRs in this range.
                     </p>
                   )}
+                  {syncStatus.success && syncInfo?.github_username ? (
+                    <Link href={`/${syncInfo.github_username}`} className="mt-2 inline-block text-xs font-semibold underline">
+                      View your profile
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -494,7 +634,7 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <Card className="border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
+          <Card id="repositories" className="scroll-mt-20 border-white/60 bg-white/80 p-6 shadow-lg shadow-primary/5 backdrop-blur">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-foreground">Repository visibility</h2>
@@ -549,95 +689,51 @@ export default function SettingsPage() {
                 <GitPullRequest className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
                 <p className="text-lg font-medium text-foreground">No repositories discovered yet</p>
                 <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                  Start a sync to build your repository cache. Once PRs are found, you can curate exactly what shows on your profile.
+                  Sync once to find the repositories you have merged PRs in. Then choose which ones show on your profile.
                 </p>
+                <Button className="mt-5 gap-2" onClick={handleSync} disabled={isSyncing}>
+                  <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
+                  {isSyncing ? 'Syncing…' : 'Sync my PRs'}
+                </Button>
               </div>
             )}
 
             {!isLoadingRepos && !repoError && repos.length > 0 && (
-              <div className="mt-5 space-y-6">
-                {groupedRepos.activeRepos.length > 0 && (
-                  <section className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground">
-                            Active repositories
-                          </h3>
-                          <p className="mt-0.5 text-sm text-muted-foreground">
-                            {groupedRepos.activeRepos.length} repo{groupedRepos.activeRepos.length === 1 ? '' : 's'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+              <div className="mt-5 grid gap-3">
+                <label className="relative block">
+                  <span className="sr-only">Filter repositories</span>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                  <input
+                    id="repo-filter"
+                    type="search"
+                    value={repoFilter}
+                    onChange={(event) => setRepoFilter(event.target.value)}
+                    placeholder={`Filter ${repos.length} repositories…`}
+                    className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  />
+                </label>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {groupedRepos.activeRepos.map((repo) => {
-                        const [owner, name] = repo.repo_full_name.split('/')
-                        const isPending = isBulkUpdating || pendingRepos[repo.repo_full_name]
-
-                        return (
-                          <RepoCard
-                            key={repo.repo_full_name}
-                            repo={repo}
-                            owner={owner}
-                            name={name}
-                            isPending={isPending}
-                            onToggle={handleRepoToggle}
-                            hasMounted={hasMounted}
-                          />
-                        )
-                      })}
-                    </div>
-                  </section>
+                {visibleRepos.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                    No repositories match &ldquo;{repoFilter}&rdquo;.
+                  </p>
+                ) : (
+                  <ul className="overflow-hidden rounded-2xl border border-border bg-background" aria-label="Repositories">
+                    {visibleRepos.map((repo) => {
+                      const [owner] = repo.repo_full_name.split('/')
+                      return (
+                        <RepoRow
+                          key={repo.repo_full_name}
+                          repo={repo}
+                          owner={owner}
+                          isPending={isBulkUpdating || Boolean(pendingRepos[repo.repo_full_name])}
+                          onToggle={handleRepoToggle}
+                          hasMounted={hasMounted}
+                        />
+                      )
+                    })}
+                  </ul>
                 )}
-
-                {groupedRepos.activeRepos.length > 0 && groupedRepos.inactiveRepos.length > 0 && (
-                  <div className="relative py-2">
-                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                      <div className="w-full border-t border-border/60" style={{ borderImage: 'linear-gradient(to right, transparent, hsl(var(--border)), transparent) 1' }} />
-                    </div>
-                  </div>
-                )}
-
-                {groupedRepos.inactiveRepos.length > 0 && (
-                  <section className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-                        <div>
-                          <h3 className="text-lg font-semibold text-muted-foreground">
-                            Inactive repositories
-                          </h3>
-                          <p className="mt-0.5 text-sm text-muted-foreground">
-                            {groupedRepos.inactiveRepos.length} repo{groupedRepos.inactiveRepos.length === 1 ? '' : 's'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {groupedRepos.inactiveRepos.map((repo) => {
-                        const [owner, name] = repo.repo_full_name.split('/')
-                        const isPending = isBulkUpdating || pendingRepos[repo.repo_full_name]
-
-                        return (
-                          <RepoCard
-                            key={repo.repo_full_name}
-                            repo={repo}
-                            owner={owner}
-                            name={name}
-                            isPending={isPending}
-                            onToggle={handleRepoToggle}
-                            hasMounted={hasMounted}
-                          />
-                        )
-                      })}
-                    </div>
-                  </section>
-                )}
-
               </div>
             )}
           </Card>

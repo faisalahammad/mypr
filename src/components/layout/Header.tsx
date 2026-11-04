@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   LogOut,
+  Compass,
   Menu,
   X,
   User,
@@ -27,13 +28,19 @@ type HeaderNavItem = {
 
 const APP_NAV: HeaderNavItem[] = [
   { href: '/feed', label: 'Feed', icon: LayoutDashboard },
+  { href: '/explore', label: 'Explore', icon: Compass },
   { href: '/settings', label: 'Settings', icon: Settings },
+]
+
+const PUBLIC_NAV: HeaderNavItem[] = [
+  { href: '/explore', label: 'Explore', icon: Compass },
 ]
 
 const LANDING_NAV: HeaderNavItem[] = [
   { href: '#features', label: 'Features' },
   { href: '#how-it-works', label: 'How it works' },
   { href: '#share', label: 'Share' },
+  { href: '/explore', label: 'Explore' },
 ]
 
 interface HeaderProps {
@@ -49,7 +56,7 @@ export default function Header({ username, avatarUrl, isLandingPage = false }: H
   const [menuOpen, setMenuOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const isAuthenticatedView = Boolean(username)
-  const navItems = isLandingPage ? LANDING_NAV : (isAuthenticatedView ? APP_NAV : [])
+  const navItems = isLandingPage ? LANDING_NAV : (isAuthenticatedView ? APP_NAV : PUBLIC_NAV)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
