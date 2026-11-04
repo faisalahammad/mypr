@@ -3,7 +3,6 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ScrollToTop from '@/components/ui/ScrollToTop'
 import { AppShell } from '@/components/layout/AppShell'
-import { getUserProfile } from '@/lib/supabase'
 
 export const metadata: Metadata = {
   title: 'Changelog — MyPR',
@@ -11,11 +10,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://mypr.pro.bd/changelog',
   },
-}
-
-interface UserProfile {
-  github_username: string
-  github_avatar_url: string | null
 }
 
 interface ChangelogEntry {
@@ -28,6 +22,7 @@ const CHANGELOG: ChangelogEntry[] = [
     date: 'November 5, 2026',
     items: [
       'Pages load much faster: the app now runs next to its database in Singapore, and clicking a link shows a loading screen right away instead of freezing',
+      'Profile pages with many pull requests load much faster, and the About and Changelog pages now open instantly',
       'The profile activity grid now fills the full width and shows a tooltip on hover with the PR count and titles for that day',
       'New activity stats above the grid: PRs in the last year, active days, longest streak, and your busiest day',
       'The profile timeline now opens on your latest month. Pick a year and a month from the bar chart to see that month\'s PRs, and copy all of its PR links in one click',
@@ -119,15 +114,11 @@ const CHANGELOG: ChangelogEntry[] = [
   },
 ]
 
-export default async function ChangelogPage() {
-  const currentUserProfile = (await getUserProfile()) as UserProfile | null
+export default function ChangelogPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Header
-        username={currentUserProfile?.github_username ?? null}
-        avatarUrl={currentUserProfile?.github_avatar_url ?? null}
-      />
+      <Header clientSession />
 
       <main className="flex-1 py-10">
         <AppShell>

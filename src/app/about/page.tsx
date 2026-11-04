@@ -8,7 +8,6 @@ import { ContributionGrid } from '@/components/about/ContributionGrid'
 import { ProfileHero } from '@/components/about/ProfileHero'
 import { WorkHistory } from '@/components/about/WorkHistory'
 import { WordCampSection } from '@/components/about/WordCampSection'
-import { getUserProfile } from '@/lib/supabase'
 
 export const metadata: Metadata = {
   title: 'About Faisal Ahammad — Customer Support Engineer & Open Source Contributor',
@@ -75,11 +74,6 @@ const personSchema = {
   ],
 }
 
-interface UserProfile {
-  github_username: string
-  github_avatar_url: string | null
-}
-
 const PUBLISHED_PLUGINS = [
   {
     name: 'Form Finder for Ninja Forms',
@@ -111,15 +105,11 @@ const CURRENT_PROJECTS = [
   },
 ] as const
 
-export default async function AboutPage() {
-  const currentUserProfile = (await getUserProfile()) as UserProfile | null
+export default function AboutPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Header
-        username={currentUserProfile?.github_username ?? null}
-        avatarUrl={currentUserProfile?.github_avatar_url ?? null}
-      />
+      <Header clientSession />
 
       <main className="flex-1 py-10">
         <AppShell>

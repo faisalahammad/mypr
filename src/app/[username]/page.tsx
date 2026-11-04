@@ -16,6 +16,7 @@ import { buildActiveRepoLookup, filterPRsByActiveRepos } from '@/lib/repo-visibi
 import {
   buildProfileResultsModel,
   getProfileResultsTag,
+  toProfileResultsClientModel,
   PROFILE_RESULTS_REVALIDATE_SECONDS,
 } from '@/lib/profile-results'
 import { ProfileResults } from '@/components/profile/ProfileResults'
@@ -155,7 +156,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             profileId={profileId}
             viewer={currentUserProfile ? { id: currentUserProfile.id, isOwner, isFollowing } : null}
           />
-          <ProfileResults model={publicProfileResults.model} isOwner={isOwner} />
+          <ProfileResults model={toProfileResultsClientModel(publicProfileResults.model)} isOwner={isOwner} />
         </AppShell>
       </main>
 

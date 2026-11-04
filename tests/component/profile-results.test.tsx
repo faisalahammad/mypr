@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { ProfileResults } from '@/components/profile/ProfileResults'
-import type { ProfileResultsModel } from '@/lib/profile-results'
+import { deriveTimelineViews, type ProfileResultsModel } from '@/lib/profile-results'
 
 const mockDownloadAsImage = jest.fn<Promise<void>, unknown[]>(() => Promise.resolve())
 
@@ -18,6 +18,16 @@ Object.assign(navigator, {
   },
 })
 
+// Newest first; repoGrid and timelineByMonth are derived from it like in production
+const timeline: ProfileResultsModel['timeline'] = [
+  { id: 'pr-101', title: 'Polish route transitions', number: 101, repoFullName: 'vercel/next.js', url: 'https://github.com/vercel/next.js/pull/101', mergedAt: '2026-04-08T08:00:00.000Z' },
+  { id: 'pr-42', title: 'Improve caching docs', number: 42, repoFullName: 'openai/docs', url: 'https://github.com/openai/docs/pull/42', mergedAt: '2026-04-06T10:00:00.000Z' },
+  { id: 'pr-7', title: 'Fix sidebar spacing', number: 7, repoFullName: 'vercel/next.js', url: 'https://github.com/vercel/next.js/pull/7', mergedAt: '2025-03-02T10:00:00.000Z' },
+  { id: 'pr-100', title: 'Fix metadata edge case', number: 100, repoFullName: 'vercel/next.js', url: 'https://github.com/vercel/next.js/pull/100', mergedAt: '2024-06-03T10:00:00.000Z' },
+  { id: 'pr-99', title: 'Tune cache tags', number: 99, repoFullName: 'vercel/next.js', url: 'https://github.com/vercel/next.js/pull/99', mergedAt: '2024-06-02T10:00:00.000Z' },
+  { id: 'pr-98', title: 'Adjust bundler config', number: 98, repoFullName: 'vercel/next.js', url: 'https://github.com/vercel/next.js/pull/98', mergedAt: '2024-06-01T10:00:00.000Z' },
+]
+
 const model: ProfileResultsModel = {
   identity: {
     avatarUrl: 'https://example.com/avatar.png',
@@ -33,93 +43,16 @@ const model: ProfileResultsModel = {
     lastSyncedAt: null,
   },
   activity: {},
-  repoGrid: [
-    {
-      fullName: 'vercel/next.js',
-      name: 'next.js',
-      org: 'vercel',
-      pullRequestCount: 4,
-      pullRequests: [
-        { number: 101, title: 'Polish route transitions', url: 'https://github.com/vercel/next.js/pull/101' },
-        { number: 100, title: 'Fix metadata edge case', url: 'https://github.com/vercel/next.js/pull/100' },
-        { number: 99, title: 'Tune cache tags', url: 'https://github.com/vercel/next.js/pull/99' },
-        { number: 98, title: 'Adjust bundler config', url: 'https://github.com/vercel/next.js/pull/98' },
-      ],
-    },
-    {
-      fullName: 'openai/docs',
-      name: 'docs',
-      org: 'openai',
-      pullRequestCount: 1,
-      pullRequests: [
-        { number: 42, title: 'Improve caching docs', url: 'https://github.com/openai/docs/pull/42' },
-      ],
-    },
-  ],
   summary: {
     mergedPRs: 4,
     repos: 2,
     topRepositories: [
-      { fullName: 'vercel/next.js', count: 4 },
+      { fullName: 'vercel/next.js', count: 5 },
       { fullName: 'openai/docs', count: 1 },
     ],
   },
-  timeline: [
-    {
-      id: 'pr-101',
-      title: 'Polish route transitions',
-      number: 101,
-      repoFullName: 'vercel/next.js',
-      url: 'https://github.com/vercel/next.js/pull/101',
-      mergedAt: '2026-04-08T08:00:00.000Z',
-    },
-    {
-      id: 'pr-42',
-      title: 'Improve caching docs',
-      number: 42,
-      repoFullName: 'openai/docs',
-      url: 'https://github.com/openai/docs/pull/42',
-      mergedAt: '2026-04-06T10:00:00.000Z',
-    },
-  ],
-  timelineByMonth: [
-    {
-      key: '2026-04',
-      label: 'April 2026',
-      entries: [
-        {
-          id: 'pr-101',
-          title: 'Polish route transitions',
-          number: 101,
-          repoFullName: 'vercel/next.js',
-          url: 'https://github.com/vercel/next.js/pull/101',
-          mergedAt: '2026-04-08T08:00:00.000Z',
-        },
-        {
-          id: 'pr-42',
-          title: 'Improve caching docs',
-          number: 42,
-          repoFullName: 'openai/docs',
-          url: 'https://github.com/openai/docs/pull/42',
-          mergedAt: '2026-04-06T10:00:00.000Z',
-        },
-      ],
-    },
-    {
-      key: '2025-03',
-      label: 'March 2025',
-      entries: [
-        {
-          id: 'pr-7',
-          title: 'Fix sidebar spacing',
-          number: 7,
-          repoFullName: 'vercel/next.js',
-          url: 'https://github.com/vercel/next.js/pull/7',
-          mergedAt: '2025-03-02T10:00:00.000Z',
-        },
-      ],
-    },
-  ],
+  timeline,
+  ...deriveTimelineViews(timeline),
   shareVariants: [
     'A lot of my recent work shipped through open source: 4 merged PRs across 2 repos. See the work: mypr.pro.bd/faisalahammad',
     'From fixes to shipped features, I’ve merged 4 PRs across 2 repos lately. See the work: mypr.pro.bd/faisalahammad',

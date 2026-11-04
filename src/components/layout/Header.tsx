@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   GitPullRequestArrow,
   LayoutDashboard,
@@ -48,9 +48,25 @@ interface HeaderProps {
   username?: string | null
   avatarUrl?: string | null
   isLandingPage?: boolean
+  /** Static pages: read the signed-in user from the browser session instead of server props */
+  clientSession?: boolean
 }
 
-export default function Header({ username, avatarUrl, isLandingPage = false }: HeaderProps) {
+export default function Header({ username: serverUsername, avatarUrl: serverAvatarUrl, isLandingPage = false, clientSession = false }: HeaderProps) {
+  const [sessionUser, setSessionUser] = useState<{ username: string; avatarUrl: string | null } | null>(null)
+  const username = clientSession ? sessionUser?.username ?? null : serverUsername
+  const avatarUrl = clientSession ? sessionUser?.avatarUrl ?? null : serverAvatarUrl
+
+  useEffect(() => {
+    if (!clientSession) return
+    // getSession reads the auth cookie locally; user_metadata holds the GitHub login the profile was created from
+    createSupabaseClient().auth.getSession().then(({ data }) => {
+      const metadata = data.session?.user.user_metadata
+      const login = metadata?.user_name || metadata?.login
+      if (login) setSessionUser({ username: login, avatarUrl: metadata?.avatar_url ?? null })
+    })
+  }, [clientSession])
+
   const pathname = usePathname()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)

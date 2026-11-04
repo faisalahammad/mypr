@@ -150,12 +150,6 @@ describe('profile page public repo visibility', () => {
           mergedPRs: 1,
           repos: 1,
         },
-        repoGrid: [
-          expect.objectContaining({
-            fullName: 'acme/public-repo',
-            pullRequestCount: 1,
-          }),
-        ],
         timeline: [
           expect.objectContaining({
             repoFullName: 'acme/public-repo',
@@ -164,6 +158,20 @@ describe('profile page public repo visibility', () => {
         ],
       },
     })
+  })
+
+  it('sends ProfileResults each PR once, without derived views', async () => {
+    const ProfilePage = (await import('@/app/[username]/page')).default
+
+    const view = await ProfilePage({
+      params: Promise.resolve({ username: 'alice' }),
+    } as never)
+    render(view as React.ReactElement)
+
+    const { model } = mockProfileResults.mock.calls[0][0] as { model: object }
+    expect(model).not.toHaveProperty('repoGrid')
+    expect(model).not.toHaveProperty('timelineByMonth')
+    expect(model).not.toHaveProperty('activity')
   })
 
   it('generates MyPR-branded profile metadata with the GitHub avatar image', async () => {

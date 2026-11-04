@@ -22,6 +22,10 @@ jest.mock('@/lib/supabase-client', () => ({
   createSupabaseClient: () => ({
     auth: {
       signOut: jest.fn(),
+      getSession: () =>
+        Promise.resolve({
+          data: { session: { user: { user_metadata: { user_name: 'octocat', avatar_url: 'https://example.com/o.png' } } } },
+        }),
     },
   }),
 }))
@@ -46,5 +50,11 @@ describe('Header', () => {
     const avatarLink = screen.getByRole('link', { name: /your profile/i })
     expect(avatarLink).toHaveAttribute('href', '/faisalahammad')
     expect(avatarLink).toHaveAttribute('data-prefetch', 'true')
+  })
+
+  it('reads the signed-in user from the browser session on static pages', async () => {
+    render(<Header clientSession />)
+
+    expect(await screen.findByRole('link', { name: /your profile/i })).toHaveAttribute('href', '/octocat')
   })
 })

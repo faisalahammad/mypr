@@ -6,14 +6,15 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 
 import { downloadAsImage } from '@/lib/utils'
 import {
+  deriveTimelineViews,
   getProfileResultsPreviewLabel,
-  type ProfileResultsModel,
+  type ProfileResultsClientModel,
   type ProfileResultsView,
 } from '@/lib/profile-results'
 import styles from './ProfileResults.module.css'
 
 interface ProfileResultsProps {
-  model: ProfileResultsModel
+  model: ProfileResultsClientModel
   /** The signed-in viewer owns this profile */
   isOwner?: boolean
 }
@@ -34,22 +35,24 @@ function getCaptureFilename(username: string, view: ProfileResultsView): string 
 }
 
 export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) {
+  // Derived here so the server sends each PR once (in `timeline`) instead of three times
+  const { repoGrid, timelineByMonth } = useMemo(() => deriveTimelineViews(model.timeline), [model.timeline])
   const previewCardRef = useRef<HTMLDivElement>(null)
   const [activeView, setActiveView] = useState<ProfileResultsView>('repos')
   const [tweetModalOpen, setTweetModalOpen] = useState(false)
   const [copyToastVisible, setCopyToastVisible] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [expandedRepos, setExpandedRepos] = useState<Record<string, boolean>>({})
-  const [selectedMonthKey, setSelectedMonthKey] = useState(model.timelineByMonth[0]?.key ?? '')
+  const [selectedMonthKey, setSelectedMonthKey] = useState(timelineByMonth[0]?.key ?? '')
 
   const { monthsByKey, yearTotals } = useMemo(() => {
     const totals = new Map<string, number>()
-    for (const month of model.timelineByMonth) {
+    for (const month of timelineByMonth) {
       const year = month.key.slice(0, 4)
       totals.set(year, (totals.get(year) ?? 0) + month.entries.length)
     }
-    return { monthsByKey: new Map(model.timelineByMonth.map((month) => [month.key, month])), yearTotals: totals }
-  }, [model.timelineByMonth])
+    return { monthsByKey: new Map(timelineByMonth.map((month) => [month.key, month])), yearTotals: totals }
+  }, [timelineByMonth])
 
   const selectedYear = selectedMonthKey.slice(0, 4)
   const selectedMonth = monthsByKey.get(selectedMonthKey)
@@ -61,7 +64,7 @@ export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) 
 
   const selectYear = (year: string) => {
     // timelineByMonth is newest first, so this picks the latest month of that year
-    const latest = model.timelineByMonth.find((month) => month.key.startsWith(year))
+    const latest = timelineByMonth.find((month) => month.key.startsWith(year))
     if (latest) setSelectedMonthKey(latest.key)
   }
 
@@ -196,7 +199,7 @@ export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) 
           <div className={styles.previewContent}>
             {activeView === 'repos' && (
               <div className={styles.repoGrid}>
-                {model.repoGrid.map((repo) => {
+                {repoGrid.map((repo) => {
                   const isExpanded = Boolean(expandedRepos[repo.fullName])
                   const hasMore = repo.pullRequestCount > 3
                   const visiblePullRequests = isExpanded ? repo.pullRequests : repo.pullRequests.slice(0, 3)
@@ -297,7 +300,7 @@ export function ProfileResults({ model, isOwner = false }: ProfileResultsProps) 
                   <div className={styles.summaryLeaderboardHeader}>Top Repositories</div>
                   <div className={styles.summaryLeaderboardList}>
                     {model.summary.topRepositories.map((repo, index) => {
-                      const repoUrls = model.repoGrid.find((entry) => entry.fullName === repo.fullName)?.pullRequests.map((pr) => pr.url) ?? []
+                      const repoUrls = repoGrid.find((entry) => entry.fullName === repo.fullName)?.pullRequests.map((pr) => pr.url) ?? []
 
                       return (
                         <div key={repo.fullName} className={styles.summaryLeaderboardItem}>

@@ -155,24 +155,19 @@ export function generateShareVariants(
   return variants.slice(0, 6)
 }
 
-export function buildProfileResultsModel({
-  profile,
-  prs,
-  contributedRepos,
-}: BuildProfileResultsModelInput): ProfileResultsModel {
-  const displayName = profile.display_name || profile.github_username
-  const repoGroups = new Map<string, ProfileResultsModel['repoGrid'][number]>()
+/** What the client ProfileResults receives: views derivable from `timeline` are dropped so each PR is serialized once */
+export type ProfileResultsClientModel = Omit<ProfileResultsModel, 'activity' | 'repoGrid' | 'timelineByMonth'>
 
-  const timeline = [...prs]
-    .sort((a, b) => new Date(b.merged_at).getTime() - new Date(a.merged_at).getTime())
-    .map((pr) => ({
-      id: pr.id,
-      title: pr.title,
-      number: pr.pr_number,
-      repoFullName: pr.repo_full_name,
-      url: pr.pr_url,
-      mergedAt: pr.merged_at,
-    }))
+export function toProfileResultsClientModel(model: ProfileResultsModel): ProfileResultsClientModel {
+  const { identity, counts, stats, summary, timeline, shareVariants } = model
+  return { identity, counts, stats, summary, timeline, shareVariants }
+}
+
+/** Groups a newest-first timeline by repository and by UTC month */
+export function deriveTimelineViews(
+  timeline: ProfileResultsModel['timeline']
+): Pick<ProfileResultsModel, 'repoGrid' | 'timelineByMonth'> {
+  const repoGroups = new Map<string, ProfileResultsModel['repoGrid'][number]>()
 
   for (const pr of timeline) {
     const [org = 'unknown', name = 'unknown'] = pr.repoFullName.split('/')
@@ -209,14 +204,6 @@ export function buildProfileResultsModel({
     return a.fullName.localeCompare(b.fullName)
   })
 
-  const topRepositories = repoGrid.map((repo) => ({
-    fullName: repo.fullName,
-    count: repo.pullRequestCount,
-  }))
-
-  const mergedPRs = prs.length
-  const repos = contributedRepos
-
   const monthGroups = new Map<string, ProfileResultsModel['timelineByMonth'][number]>()
   for (const entry of timeline) {
     const mergedDate = new Date(entry.mergedAt)
@@ -235,6 +222,37 @@ export function buildProfileResultsModel({
   }
 
   const timelineByMonth = Array.from(monthGroups.values())
+
+  return { repoGrid, timelineByMonth }
+}
+
+export function buildProfileResultsModel({
+  profile,
+  prs,
+  contributedRepos,
+}: BuildProfileResultsModelInput): ProfileResultsModel {
+  const displayName = profile.display_name || profile.github_username
+
+  const timeline = [...prs]
+    .sort((a, b) => new Date(b.merged_at).getTime() - new Date(a.merged_at).getTime())
+    .map((pr) => ({
+      id: pr.id,
+      title: pr.title,
+      number: pr.pr_number,
+      repoFullName: pr.repo_full_name,
+      url: pr.pr_url,
+      mergedAt: pr.merged_at,
+    }))
+
+  const { repoGrid, timelineByMonth } = deriveTimelineViews(timeline)
+
+  const topRepositories = repoGrid.map((repo) => ({
+    fullName: repo.fullName,
+    count: repo.pullRequestCount,
+  }))
+
+  const mergedPRs = prs.length
+  const repos = contributedRepos
 
   const activityStart = Date.now() - 366 * 24 * 60 * 60 * 1000
   const activity: Record<string, ActivityDayPR[]> = {}
