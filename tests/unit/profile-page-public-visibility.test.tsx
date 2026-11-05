@@ -219,7 +219,7 @@ describe('profile page public repo visibility', () => {
       openGraph: {
         images: [
           {
-            url: '/og-placeholder.jpg',
+            url: '/og-mypr.jpg',
             width: 1200,
             height: 630,
           },
@@ -227,7 +227,7 @@ describe('profile page public repo visibility', () => {
       },
       twitter: {
         card: 'summary_large_image',
-        images: ['/og-placeholder.jpg'],
+        images: ['/og-mypr.jpg'],
       },
     })
   })

@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-placeholder.jpg",
+        url: "/og-mypr.jpg",
         width: 1200,
         height: 630,
         alt: "MyPR social sharing placeholder image",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MyPR",
     description: "MyPR helps developers turn merged pull requests into a public portfolio they can share anywhere.",
-    images: ["/og-placeholder.jpg"],
+    images: ["/og-mypr.jpg"],
   },
   robots: {
     index: true,

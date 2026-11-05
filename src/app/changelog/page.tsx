@@ -19,6 +19,12 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: 'November 6, 2026',
+    items: [
+      'Sharing mypr.pro.bd now shows the MyPR card as the link preview image instead of an outdated photo',
+    ],
+  },
+  {
     date: 'November 5, 2026',
     items: [
       'Syncing in Settings is now one button that brings in your whole PR history. The date range picker is gone, and a step-by-step tracker shows what the sync is doing, with live counts',

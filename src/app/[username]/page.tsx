@@ -184,7 +184,7 @@ export async function generateMetadata({ params }: ProfilePageProps) {
   // GitHub caps avatars at 460x460; fall back to the site OG image when a
   // profile has no avatar so social platforms never render a blank card.
   const avatar = profile.github_avatar_url
-  const image = avatar ?? '/og-placeholder.jpg'
+  const image = avatar ?? '/og-mypr.jpg'
   const imageDimensions = avatar ? { width: 460, height: 460 } : { width: 1200, height: 630 }
 
   return {

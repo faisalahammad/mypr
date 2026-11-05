@@ -18,14 +18,14 @@ describe('root layout metadata', () => {
         siteName: 'MyPR',
         images: [
           expect.objectContaining({
-            url: '/og-placeholder.jpg',
+            url: '/og-mypr.jpg',
           }),
         ],
       },
       twitter: {
         card: 'summary_large_image',
         title: 'MyPR',
-        images: ['/og-placeholder.jpg'],
+        images: ['/og-mypr.jpg'],
       },
       robots: {
         index: true,
