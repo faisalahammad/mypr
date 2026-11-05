@@ -19,6 +19,7 @@ export interface ProfileResultsModel {
   }
   stats: {
     linesAdded: number
+    linesRemoved: number
     lastSyncedAt: string | null
   }
   /** Merged PRs per UTC day (YYYY-MM-DD) over the last 366 days */
@@ -257,9 +258,11 @@ export function buildProfileResultsModel({
   const activityStart = Date.now() - 366 * 24 * 60 * 60 * 1000
   const activity: Record<string, ActivityDayPR[]> = {}
   let linesAdded = 0
+  let linesRemoved = 0
   let lastSyncedAt: string | null = null
   for (const pr of prs) {
     linesAdded += pr.additions ?? 0
+    linesRemoved += pr.deletions ?? 0
     if (pr.synced_at && (!lastSyncedAt || pr.synced_at > lastSyncedAt)) lastSyncedAt = pr.synced_at
     if (Date.parse(pr.merged_at) >= activityStart) {
       const day = pr.merged_at.slice(0, 10)
@@ -280,6 +283,7 @@ export function buildProfileResultsModel({
     },
     stats: {
       linesAdded,
+      linesRemoved,
       lastSyncedAt,
     },
     activity,

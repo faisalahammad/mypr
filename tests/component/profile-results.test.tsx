@@ -40,6 +40,7 @@ const model: ProfileResultsModel = {
   },
   stats: {
     linesAdded: 1200,
+    linesRemoved: 300,
     lastSyncedAt: null,
   },
   activity: {},

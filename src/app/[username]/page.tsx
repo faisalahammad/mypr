@@ -111,7 +111,8 @@ async function getPublicProfileResultsData(username: string) {
 async function getCachedPublicProfileResultsData(username: string) {
   return unstable_cache(
     async () => getPublicProfileResultsData(username),
-    ['profile-results', username],
+    // Bump the version when the model shape changes: entries outlive deploys.
+    ['profile-results-v2', username],
     {
       revalidate: PROFILE_RESULTS_REVALIDATE_SECONDS,
       tags: [getProfileResultsTag(username)],

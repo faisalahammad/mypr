@@ -20,7 +20,7 @@ const today = new Date().toISOString().slice(0, 10)
 const model = {
   identity: { avatarUrl: null, displayName: 'Faisal Ahammad', username: 'faisalahammad' },
   counts: { mergedPRs: 214, repos: 6 },
-  stats: { linesAdded: 38200, lastSyncedAt: null },
+  stats: { linesAdded: 38200, linesRemoved: 12400, lastSyncedAt: null },
   activity: { [today]: [{ number: 1, title: 'One' }] },
   summary: {
     mergedPRs: 214,
@@ -42,6 +42,7 @@ describe('ProfileHeader', () => {
     expect(screen.getByRole('heading', { name: 'Faisal Ahammad' })).toBeInTheDocument()
     expect(screen.getByText('214')).toBeInTheDocument()
     expect(screen.getByText('+38.2K')).toBeInTheDocument()
+    expect(screen.getByText('-12.4K')).toBeInTheDocument()
     expect(screen.getByText('woocommerce/woocommerce · 92')).toBeInTheDocument()
     expect(screen.getByText('+1 more')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /github/i })).toHaveAttribute('href', 'https://github.com/faisalahammad')

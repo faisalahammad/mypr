@@ -82,11 +82,12 @@ export function ProfileHeader({ model, profileId, viewer }: ProfileHeaderProps) 
         </div>
       </div>
 
-      <dl className="grid grid-cols-3 gap-2 sm:gap-3">
+      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {[
           { label: 'merged PRs', value: counts.mergedPRs.toLocaleString('en') },
           { label: 'repos', value: counts.repos.toLocaleString('en') },
           { label: 'lines added', value: `+${compactNumber.format(stats.linesAdded)}` },
+          { label: 'lines removed', value: `-${compactNumber.format(stats.linesRemoved)}` },
         ].map((item) => (
           <div key={item.label} className="grid rounded-xl bg-muted/60 px-3 py-3">
             <dd className="text-xl font-bold tabular-nums text-foreground sm:text-2xl">{item.value}</dd>
