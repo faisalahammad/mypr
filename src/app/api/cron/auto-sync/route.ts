@@ -18,8 +18,9 @@ interface AutoSyncProfile {
 /**
  * GET /api/cron/auto-sync
  *
- * Vercel Cron Job handler — runs daily at 00:00 UTC (06:00 Bangladesh time)
- * via vercel.json schedule. Auto-sync is forced on for every registered user:
+ * Cron handler — runs hourly via .github/workflows/auto-sync.yml (Vercel Hobby
+ * only allows daily crons) and daily at 00:00 UTC (06:00 Bangladesh time) via
+ * the vercel.json schedule as a backup. Auto-sync is forced on for every registered user:
  * all profiles with a GitHub token get their whole PR history synced,
  * fetching only PRs that aren't cached yet.
  *

@@ -21,6 +21,7 @@ const CHANGELOG: ChangelogEntry[] = [
   {
     date: 'November 6, 2026',
     items: [
+      'Your PRs now sync automatically every hour instead of once a day, so new merges show up on your profile sooner',
       'Sharing mypr.pro.bd now shows the MyPR card as the link preview image instead of an outdated photo',
     ],
   },

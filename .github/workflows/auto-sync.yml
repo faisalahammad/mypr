@@ -1,0 +1,26 @@
+name: Hourly auto-sync
+
+# Vercel Hobby only allows daily crons, so GitHub triggers the same endpoint hourly.
+# Minute 17, not :00, because GitHub delays scheduled jobs at the top of the hour.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Call /api/cron/auto-sync
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET" || { echo "CRON_SECRET repo secret is not set"; exit 1; }
+          # Body is dropped on purpose: it lists usernames and this repo's logs are public.
+          # max-time matches the route's 300s maxDuration plus headroom.
+          curl --fail --silent --show-error --output /dev/null --max-time 330 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://mypr.pro.bd/api/cron/auto-sync
